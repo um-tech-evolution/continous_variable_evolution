@@ -6,12 +6,6 @@ Recommended command line to run:
 >  julia -L ContVarEvolution.jl run_cv.jl configs/example1
 =#
 
-function repeat_simulation( sr::ContVarEvolution.cont_var_result_type )
-  for t = 1:sr.num_trials
-    sr = cont_var_simulation( sr )
-  end
-end
-
 @doc """ function cont_var_simulation()
   Wright-Fisher model simulation (as opposed to Moran model)
   Parameters:

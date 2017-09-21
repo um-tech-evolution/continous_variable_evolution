@@ -41,7 +41,6 @@ function writeheader( stream::IO, sr::cont_var_result_type )
     "# wrap_attributes =$(sr.wrap_attributes)",
     "# additive_error=$(sr.additive_error)",
     "# burn_in=$(sr.burn_in)",
-    "# mutation_stddev=$(sr.mutation_stddev)",
     "# neutral=$(sr.neutral)",
     "# ideal=$(sr.ideal)"]
 
