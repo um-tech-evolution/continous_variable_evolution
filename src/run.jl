@@ -20,10 +20,10 @@ function run_trials( simname::AbstractString )
     end
   end
   =#
-  for trial = 1:num_trials
-    for N in N_list
-      for N_mut in N_mut_list
-        for num_attributes in num_attributes_list
+  for N in N_list
+    for N_mut in N_mut_list
+      for num_attributes in num_attributes_list
+        for trial = 1:num_trials
           mutation_stddev = N_mut/N
           println("N: ",N,"  N_mut ",N_mut,"  mutation stddev: ",mutation_stddev)
           sr = ContVarEvolution.cont_var_result(num_trials,N,num_subpops,num_attributes, ngens, burn_in,

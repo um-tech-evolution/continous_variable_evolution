@@ -1,5 +1,5 @@
 module ContVarEvolution
-include("types_cv.jl")
+include("types.jl")
 include("propsel.jl")
 include("cont_var.jl")
 include("run_cont_var.jl")
