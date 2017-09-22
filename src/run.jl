@@ -2,33 +2,45 @@
 using ContVarEvolution
 
 function run_trials( simname::AbstractString ) 
+  global mutation_stddev_list
+  global N_mut_list
   #circular_variation = extreme_variation = false
   stream = open("$(simname).csv","w")
   println("stream: ",stream)
-  sr = ContVarEvolution.cont_var_result(num_trials,N_list[1],num_subpops,num_attributes_list[1], ngens, burn_in,
-      N_mut_list[1]/N_list[1]/100, ideal, wrap_attributes, additive_error, neutral )
+  println("isdefined mutation_stddev_list: ",isdefined(:mutation_stddev_list))
+  println("isdefined N_mut_list: ",isdefined(:N_mut_list))
+  if isdefined(:mutation_stddev_list)
+    sr = ContVarEvolution.cont_var_result(num_trials,N_list[1],num_subpops,num_attributes_list[1], ngens, burn_in,
+       mutation_stddev_list[1], ideal, wrap_attributes, additive_error, neutral )
+  elseif isdefined(:N_mut_list)
+    sr = ContVarEvolution.cont_var_result(num_trials,N_list[1],num_subpops,num_attributes_list[1], ngens, burn_in,
+       N_mut_list[1]/N_list[1]/100, ideal, wrap_attributes, additive_error, neutral )
+  end
   sr_list_run = ContVarEvolution.cont_var_result_type[]
   trial=1
-  #=
-  for N in N_list
-    for num_attributes in num_attributes_list
-      for mutation_stddev in mutation_stddev_list
-            sr = ContVarEvolution.cont_var_result(num_trials,N,num_subpops,num_attributes, ngens, burn_in,
-               mutation_stddev, ideal, wrap_attributes, additive_error, neutral )
-            Base.push!(sr_list_run, sr )
+  if isdefined(:mutation_stddev_list)
+    for N in N_list
+      for num_attributes in num_attributes_list
+        for mutation_stddev in mutation_stddev_list
+          for trial = 1:num_trials
+              sr = ContVarEvolution.cont_var_result(num_trials,N,num_subpops,num_attributes, ngens, burn_in,
+                 mutation_stddev, ideal, wrap_attributes, additive_error, neutral )
+              Base.push!(sr_list_run, sr )
+          end
+        end
       end
     end
-  end
-  =#
-  for N in N_list
-    for N_mut in N_mut_list
-      for num_attributes in num_attributes_list
-        for trial = 1:num_trials
-          mutation_stddev = N_mut/N
-          println("N: ",N,"  N_mut ",N_mut,"  mutation stddev: ",mutation_stddev)
-          sr = ContVarEvolution.cont_var_result(num_trials,N,num_subpops,num_attributes, ngens, burn_in,
-               mutation_stddev, ideal, wrap_attributes, additive_error, neutral )
-          Base.push!(sr_list_run, sr )
+  elseif isdefined(:N_mut_list)
+    for N in N_list
+      for N_mut in N_mut_list
+        for num_attributes in num_attributes_list
+          for trial = 1:num_trials
+            mutation_stddev = N_mut/N
+            println("N: ",N,"  N_mut ",N_mut,"  mutation stddev: ",mutation_stddev)
+            sr = ContVarEvolution.cont_var_result(num_trials,N,num_subpops,num_attributes, ngens, burn_in,
+                 mutation_stddev, ideal, wrap_attributes, additive_error, neutral )
+            Base.push!(sr_list_run, sr )
+          end
         end
       end
     end
@@ -56,6 +68,6 @@ else
   end
 end
 include("$(simname).jl")
-println("simname: ",simname)
-#println("simtype: ",simtype)
+#println("simname: ",simname)
+println("simtype: ",simtype)
 run_trials( simname )
