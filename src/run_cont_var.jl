@@ -33,9 +33,19 @@ function print_cont_var_result( sr::cont_var_result_type )
 end
 
 function writeheader( stream::IO, sr::cont_var_result_type )
+  global mutation_stddev_list
+  global N_mut_list
+  println("isdefined mutation_stddev_list: ",isdefined(:mutation_stddev_list))
+  println("isdefined N_mut_list: ",isdefined(:N_mut_list))
+  if isdefined(:N_mut_list)
+    N_mut_string = "# using N_mut_list"
+  elseif isdefined(:mutation_stddev_list)
+    N_mut_string = "# using mutation_stddev_list"
+  end
   param_strings = [
     "# $(string(Dates.today()))",
     "# num_trials=$(sr.num_trials)",
+    N_mut_string,
     #"# N=$(sr.N)",
     #"# num_attributes=$(sr.num_attributes)",
     "# ngens=$(sr.ngens)",

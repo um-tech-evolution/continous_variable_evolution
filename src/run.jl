@@ -47,7 +47,7 @@ function run_trials( simname::AbstractString )
   end
   println("===================================")
   #sr_list_result = pmap(cont_var_simulation, sr_list_run )
-  sr_list_result = map(cont_var_simulation, sr_list_run )
+  sr_list_result = pmap(cont_var_simulation, sr_list_run )
   trial = 1
   writeheader( STDOUT, sr )
   writeheader( stream, sr )
