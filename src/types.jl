@@ -22,9 +22,10 @@ type cont_var_result_type
   wrap_attributes::Bool      # Keep attributes within the unit interval by wrapping around (so that attribute space is toroidal)
   additive_error::Bool       # If true, use additive rather than multiplicative copy error
   neutral::Bool              # If true, fitness = 1
-  fitness_mean::Float64
-  fitness_variance::Float64
-  attribute_variance::Float64
+  fitness_mean::Float64      # average of fitnesses over subpopulations and generations
+  fitness_coef_var::Float64  # average coefficent of variation of fitnesss over subpopulations and generations
+  attribute_mean::Float64    # average of attributes over attributes, subpopulations, and generations
+  attribute_coef_var::Float64 # average coefficent of variation of attributes over attributes, subpopulations and generations
   neg_count::Int64        # Number of fitness differences < -1.0/N
   neg_neutral::Int64      # Number of fitness differences >= -1.0/N  and < 0.0
   pos_neutral::Int64     # Number of fitness differences >= 0.0 and < 1.0/N

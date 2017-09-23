@@ -19,13 +19,14 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
   fit_diff_counter = DataStructures.counter(Int64)
   variant_table = Dict{Int64,variant_type}()
   int_burn_in = Int(round(sr.burn_in*sr.N+50.0))  # reduce for testing
-  int_burn_in = 0
   id = Int[1]
   n = Int(floor(sr.N/sr.num_subpops))    # size of subpopulations
   println("N: ",sr.N,"  mutation_stddev: ",sr.mutation_stddev,"  num_attributes: ",sr.num_attributes)
-  cumm_means = zeros(Float64,sr.num_subpops)
-  cumm_variances = zeros(Float64,sr.num_subpops)
-  cumm_attr_vars = zeros(Float64,sr.num_subpops)
+  cumm_fitness_means = zeros(Float64,sr.num_subpops)
+  cumm_fitness_coef_vars = zeros(Float64,sr.num_subpops)
+  cumm_attr_means = [ zeros(Float64,sr.num_attributes) for i in 1:sr.num_subpops]
+  cumm_attr_coef_vars = [ zeros(Float64,sr.num_attributes) for i in 1:sr.num_subpops]
+  count_gens = 0
   subpops = PopList()
   for j = 1:sr.num_subpops
     Base.push!( subpops, Population() )
@@ -33,13 +34,6 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
       Base.push!( subpops[j], new_innovation( id, sr.ideal, sr.num_attributes, variant_table, sr.neutral ) )
     end
   end
-  #=
-  println("subpop: ", subpops[1] )
-  for k in subpops[1]
-    attribs = variant_table[k].attributes
-    println("k: ",k,"  fitness: ",variant_table[k].fitness,"  min: ",minimum(attribs),"  max: ",maximum(attribs),"  mean: ",mean(attribs))
-  end
-  =#
   previous_variant_id = 1
   current_variant_id = id[1]
   previous_subpops = deepcopy(subpops)
@@ -58,29 +52,35 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
     end
     previous_subpops = deepcopy(subpops)
     if after_burn_in
-      (mmeans,vvars) = means(subpops,variant_table)
-      cumm_means += mmeans
-      cumm_variances += vvars
-      avars = attr_vars(subpops,variant_table, sr.num_attributes )
-      cumm_attr_vars += avars
-      #println("g: ",g,"  mmeans: ",mmeans,"  avars: ", avars, "  cumm_variances: ", cumm_variances)
-      attribs = [variant_table[subpops[1][k]].attributes[1] for k = 1:sr.N]
-      #println("g: ",g,"  attribs: ",attribs)
-      #println("g: ",g,"  mean: ",mean(attribs),"  avars: ", avars)
+      cumm_fitness_means += [ mean( [variant_table[v].fitness for v in s]) for s in subpops]
+      cumm_fitness_coef_vars += [ coef_var( [variant_table[v].fitness for v in s]) for s in subpops]
+      # cumm_attr_means[s][i] is the mean of attribute i for subpop s, where the mean is over elements of s
+      cumm_attr_means += [ [ mean( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops]
+      # cumm_attr_coef_vars[s][i] is the coefficient of variation of attribute i for subpop s, where the mean is over elements of s
+      cumm_attr_coef_vars += [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops]
+      count_gens += 1
+      #= Debugging output
+      for j in 1:sr.num_subpops
+        attribs = [variant_table[subpops[j][k]].attributes for k = 1:n]
+        println("g: ",g,"  attribs for subpop: ",j,": ",attribs )
+        println("attrib means for subpop ",j,"s: ",mean(attribs))
+        println("cumm_attr_means: ",cumm_attr_means)
+      end
+      =#
     end
     clean_up_variant_table(previous_previous_variant_id,previous_variant_id,variant_table)
   end  # for g
-  #println("subpop: ", subpops[1] )
-  for k in subpops[1]
-    attribs = variant_table[k].attributes
-    #println("k: ",k,"  fitness: ",variant_table[k].fitness,"  min: ",minimum(attribs),"  max: ",maximum(attribs),"  mean: ",mean(attribs))
-  end
-  cumm_means /= sr.ngens
-  cumm_variances /= sr.ngens
-  cumm_attr_vars /= sr.ngens
-  sr.fitness_mean = mean(cumm_means)
-  sr.fitness_variance = mean(cumm_variances)
-  sr.attribute_variance = mean(cumm_attr_vars)
+  @assert count_gens == sr.ngens
+  cumm_fitness_means /= sr.ngens
+  cumm_fitness_coef_vars /= sr.ngens
+  cumm_attr_means /= sr.ngens
+  cumm_attr_coef_vars /= sr.ngens
+  # The next 2 means are over subpops
+  sr.fitness_mean = mean(cumm_fitness_means)
+  sr.fitness_coef_var = mean(cumm_fitness_coef_vars)
+  # The next 2 means are over attributes and subpops
+  sr.attribute_mean = mean(mean(cumm_attr_means))
+  sr.attribute_coef_var = mean(mean(cumm_attr_coef_vars))
   (sr.neg_count, sr.neg_neutral, sr.pos_neutral, sr.pos_count ) = summarize_bins( fit_diff_counter )
   return sr
 end
@@ -200,18 +200,24 @@ function means( subpops::PopList, variant_table::Dict{Int64,variant_type} )
   return means, vars
 end
 
+function attr_means( subpops::PopList, variant_table::Dict{Int64,variant_type}, num_attributes::Int64 )
+  #num_attributes = length(variant_table[1].attributes)
+  #println("attr_vars: num_attributes: ",num_attributes)
+  ave_means = zeros(Float64,length(subpops))
+  i = 1
+  for s in subpops
+    att_means = [ mean([variant_table[v].attributes[j] for v in s]) for j =1:num_attributes]
+    #println(s," att_means: ",att_means)
+    ave_means[i] = mean(att_means)
+    i += 1
+  end
+  println("ave_means: ",ave_means)
+  return ave_means
+end
+
 function attr_vars( subpops::PopList, variant_table::Dict{Int64,variant_type}, num_attributes::Int64 )
   #num_attributes = length(variant_table[1].attributes)
   #println("attr_vars: num_attributes: ",num_attributes)
-  #=
-  for s in subpops
-    println("subpop: ",s)
-    println(s," fitness: ",[variant_table[v].fitness for v in s ],"  variance: ",var([variant_table[v].fitness for v in s ]))
-    for j = 1:num_attributes
-      println("attribute[",j,"]: ",[(v,variant_table[v].attributes[j]) for v in s],"  variance: ",var([variant_table[v].attributes[j] for v in s]) )
-    end
-  end
-  =#
   ave_vars = zeros(Float64,length(subpops))
   i = 1
   for s in subpops
@@ -234,6 +240,10 @@ function fit_loc_index(N,num_subpops,num_fit_locs,j,i)
   return 1
 end
 
+function coef_var( lst )
+  return std(lst)/mean(lst)
+end
+
 #= Duplicates a function in bin_data.jl
 # Create a dictionary that bins a real-valued vector
 function create_bins( vect::Vector{Float64}, cutoff::Float64 )
@@ -254,3 +264,4 @@ function clean_up_variant_table( previous_variant_id::Int64, previous_previous_v
   end
 end
  
+
