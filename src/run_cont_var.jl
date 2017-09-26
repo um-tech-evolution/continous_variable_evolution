@@ -5,9 +5,14 @@ Recommended command line to run:
 export cont_var_result, print_cont_var_result, run_trial, writeheader, writerow
 #include("types.jl")
   
-function cont_var_result( num_trials, N::Int64, num_subpops::Int64, num_attributes::Int64, ngens::Int64, burn_in::Float64,
+function cont_var_result( num_trials, N::Int64, num_subpops::Int64, num_attributes::Int64, ngens::Int64, burn_in::Number,
      mutation_stddev::Float64, ideal::Float64, wrap_attributes::Bool, additive_error::Bool, neutral::Bool=false )
-  return cont_var_result_type( num_trials, N, num_subpops, num_attributes, ngens, burn_in,
+  if typeof(burn_in) == Int64
+    int_burn_in = burn_in
+  else
+    int_burn_in = Int(round(burn_in*N+50.0))
+  end
+  return cont_var_result_type( num_trials, N, num_subpops, num_attributes, ngens, int_burn_in,
       mutation_stddev, ideal, wrap_attributes, additive_error, neutral, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
 end
 
@@ -51,7 +56,7 @@ function writeheader( stream::IO, sr::cont_var_result_type )
     "# ngens=$(sr.ngens)",
     "# wrap_attributes =$(sr.wrap_attributes)",
     "# additive_error=$(sr.additive_error)",
-    "# burn_in=$(sr.burn_in)",
+    "# int_burn_in=$(sr.int_burn_in)",
     "# neutral=$(sr.neutral)",
     "# ideal=$(sr.ideal)"]
 

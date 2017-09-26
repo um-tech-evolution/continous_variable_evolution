@@ -18,10 +18,10 @@ Recommended command line to run:
 function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
   fit_diff_counter = DataStructures.counter(Int64)
   variant_table = Dict{Int64,variant_type}()
-  int_burn_in = Int(round(sr.burn_in*sr.N+50.0))  # reduce for testing
+  #int_burn_in = Int(round(sr.burn_in*sr.N+50.0))  # reduce for testing
   id = Int[1]
   n = Int(floor(sr.N/sr.num_subpops))    # size of subpopulations
-  println("N: ",sr.N,"  mutation_stddev: ",sr.mutation_stddev,"  num_attributes: ",sr.num_attributes)
+  println("N: ",sr.N,"  mutation_stddev: ",sr.mutation_stddev,"  num_attributes: ",sr.num_attributes,"  int_burn_in: ",sr.int_burn_in)
   cumm_fitness_means = zeros(Float64,sr.num_subpops)
   cumm_fitness_coef_vars = zeros(Float64,sr.num_subpops)
   cumm_attr_means = [ zeros(Float64,sr.num_attributes) for i in 1:sr.num_subpops]
@@ -37,8 +37,9 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
   previous_variant_id = 1
   current_variant_id = id[1]
   previous_subpops = deepcopy(subpops)
-  for g = 2:sr.ngens+int_burn_in
-    after_burn_in = g > int_burn_in
+  for g = 1:sr.ngens+sr.int_burn_in
+    #println("before g: ",g,"  pop: ",subpops[1],"  pop attr: ",[ variant_table[subpops[1][i]].attributes[1] for i = 1:n ])
+    after_burn_in = g > sr.int_burn_in
     #println("g: ",g,"  after_burn_in: ",after_burn_in)
     previous_previous_variant_id = previous_variant_id
     previous_variant_id = current_variant_id
@@ -48,7 +49,16 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
         cp = copy_parent( previous_subpops[j][i], id, sr.ideal, variant_table, sr, after_burn_in, fit_diff_counter )
         subpops[j][i] = cp
       end
-      subpops[j] = propsel( subpops[j], n, variant_table )
+      #println("g: ",g,"  pop: ",subpops[j],"  pop attr: ",[ variant_table[subpops[j][i]].attributes[1] for i = 1:n ])
+      #subpops[j] = propsel( subpops[j], n, variant_table )
+      if sr.neutral
+        new_subpop = deepcopy(subpops[j])
+        subpops[j] = [ new_subpop[ rand(1:n) ] for j = 1:n ]
+        #println("g: ",g," j: ",j," new_subpop: ",subpops[j])
+      else
+        subpops[j] = propsel( subpops[j], n, variant_table )
+      end
+      #println("g: ",g,"  pop: ",subpops[j],"  pop attr: ",[ variant_table[subpops[j][i]].attributes[1] for i = 1:n ])
     end
     previous_subpops = deepcopy(subpops)
     if after_burn_in
@@ -59,14 +69,6 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
       # cumm_attr_coef_vars[s][i] is the coefficient of variation of attribute i for subpop s, where the mean is over elements of s
       cumm_attr_coef_vars += [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops]
       count_gens += 1
-      #= Debugging output
-      for j in 1:sr.num_subpops
-        attribs = [variant_table[subpops[j][k]].attributes for k = 1:n]
-        println("g: ",g,"  attribs for subpop: ",j,": ",attribs )
-        println("attrib means for subpop ",j,"s: ",mean(attribs))
-        println("cumm_attr_means: ",cumm_attr_means)
-      end
-      =#
     end
     clean_up_variant_table(previous_previous_variant_id,previous_variant_id,variant_table)
   end  # for g
@@ -108,7 +110,7 @@ end
 
 function new_innovation( id::Vector{Int64}, ideal::Float64, num_attributes::Int64, variant_table::Dict{Int64,variant_type}, neutral::Bool )
   i = id[1]
-  variant_table[i] = variant_type( i, 0.0, fill( ideal, num_attributes ) )
+  variant_table[i] = variant_type( 0.0, fill( ideal, num_attributes ) )
   variant_table[i].fitness = fitness( variant_table[i].attributes, fill( ideal, num_attributes), neutral )  
   id[1] += 1
   #println("new innovation attributes: ",variant_table[i].attributes)
@@ -124,58 +126,61 @@ function copy_parent( v::Int64, id::Vector{Int64},
     sr::ContVarEvolution.cont_var_result_type, after_burn_in::Bool, fit_diff_counter::DataStructures.Accumulator{Int64,Int64} )
   i = id[1]
   vt = variant_table[v]
-  vt.attributes = mutate_attributes( vt.attributes, sr.mutation_stddev, sr.wrap_attributes, sr.additive_error )
-  new_fit = fitness( vt.attributes, fill( ideal, sr.num_attributes), sr.neutral )
+  new_attributes = mutate_attributes( vt.attributes, sr.mutation_stddev, sr.wrap_attributes, sr.additive_error )
+  new_fit = fitness( new_attributes, fill( ideal, sr.num_attributes), sr.neutral )
   if after_burn_in
     increment_bins( fit_diff_counter, new_fit-vt.fitness, 1.0/sr.N )
   end
   variant_table[i] = deepcopy(vt)
   variant_table[i].fitness = new_fit
+  variant_table[i].attributes = new_attributes
   id[1] += 1
   return i
 end  
 
 function mutate_attributes( attributes::Vector{Float64}, mutation_stddev::Float64, wrap_attributes::Bool, additive_error::Bool )
+  #println("mutate attributes  attributes: ",attributes)
+  new_attributes = deepcopy(attributes)
   if wrap_attributes
-    for i = 1:length(attributes)
-      #println("B attributes[",i,"]: ",attributes[i])
-      attributes[i] += +mutation_stddev*randn()
-      if attributes[i] < 0
-          attributes[i] += 1.0
-          #println("wrapped up: ",attributes[i])
+    for i = 1:length(new_attributes)
+      #println("B new_attributes[",i,"]: ",new_attributes[i])
+      new_attributes[i] += +mutation_stddev*randn()
+      if new_attributes[i] < 0
+          new_attributes[i] += 1.0
+          #println("wrapped up: ",new_attributes[i])
       end
-      if attributes[i] > 1.0
-          attributes[i] -= 1.0
-          #println("wrapped down: ",attributes[i])
+      if new_attributes[i] > 1.0
+          new_attributes[i] -= 1.0
+          #println("wrapped down: ",new_attributes[i])
       end
-      attributes[i] = min(1.0,max(0.0,attributes[i]))
-      #println("A attributes[",i,"]: ",attributes[i])
+      new_attributes[i] = min(1.0,max(0.0,new_attributes[i]))
+      #println("A new_attributes[",i,"]: ",new_attributes[i])
     end
-    #println("attributes: ",attributes)
-    return attributes
+    #println("new_attributes: ",new_attributes)
+    return new_attributes
   else
     if additive_error
-      for i = 1:length(attributes)
-        attributes[i] += +mutation_stddev*randn()
+      for i = 1:length(new_attributes)
+        new_attributes[i] += +mutation_stddev*randn()
       end
     else
-      for i = 1:length(attributes)
-        if attributes[i] <= 0.0
-          println("neg attribute: ",attributes[i])
-          attributes[i] = 1.0e-6
+      for i = 1:length(new_attributes)
+        if new_attributes[i] <= 0.0
+          println("neg attribute: ",new_attributes[i])
+          new_attributes[i] = 1.0e-6
         end
         multiplier = (1.0+mutation_stddev*randn())
         while multiplier <= 1.0e-6
           println("neg multiplier")
           multiplier = (1.0+mutation_stddev*randn())
         end
-        attributes[i] *= multiplier
-        if attributes[i] < 0.0
-          println("negative attribute with i=",i,": attribute: ",attribute[i])
+        new_attributes[i] *= multiplier
+        if new_attributes[i] < 0.0
+          println("negative attribute with i=",i,": attribute: ",new_attributes[i])
         end
       end
     end
-    return attributes
+    return new_attributes
   end
 end
 

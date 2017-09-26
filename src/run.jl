@@ -36,9 +36,10 @@ function run_trials( simname::AbstractString )
         for num_attributes in num_attributes_list
           for trial = 1:num_trials
             mutation_stddev = N_mut/N
-            println("N: ",N,"  N_mut ",N_mut,"  mutation stddev: ",mutation_stddev)
             sr = ContVarEvolution.cont_var_result(num_trials,N,num_subpops,num_attributes, ngens, burn_in,
                  mutation_stddev, ideal, wrap_attributes, additive_error, neutral )
+            int_burn_in = Int(round(burn_in*sr.N+50.0)) 
+            println("N: ",N,"  N_mut ",N_mut,"  mutation stddev: ",mutation_stddev,"  int_burn_in: ",int_burn_in)
             Base.push!(sr_list_run, sr )
           end
         end
@@ -46,8 +47,7 @@ function run_trials( simname::AbstractString )
     end
   end
   println("===================================")
-  #sr_list_result = pmap(cont_var_simulation, sr_list_run )
-  sr_list_result = pmap(cont_var_simulation, sr_list_run )
+  sr_list_result = map(cont_var_simulation, sr_list_run )
   trial = 1
   writeheader( STDOUT, sr )
   writeheader( stream, sr )
