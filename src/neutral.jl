@@ -15,20 +15,32 @@ type simple_neutral_type
   num_trials::Int64
   record_interval::Int64
   use_population::Bool     # must be true if N>1
+  save_populations::Bool    # Save the final population for each trial as a column of the CSV file
   #use_log_update::Bool     # for now, must be false if N>1
   average_attr_mean::Float64
+  average_attr_median::Float64
   average_attr_coef_var::Float64
   attr_mean_history::Vector{Float64}
   attr_median_history::Vector{Float64}
   attr_coef_var_history::Vector{Float64}
+  saved_population::Vector{Float64}
 end
 
-function simple_neutral_init( N::Int64, mutstddev::Float64, ngens::Int64, initial_value::Float64, num_trials::Int64, record_interval::Int64, use_population::Bool=true )
+function simple_neutral_init( N::Int64, mutstddev::Float64, ngens::Int64, initial_value::Float64, num_trials::Int64, 
+    record_interval::Int64, use_population::Bool=true, save_population::Bool=false )
   num_results = Int(ceil(ngens/record_interval))
-  simple_neutral_type( N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population, 0.0, 0.0, 
+  sn = simple_neutral_type( N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population, save_population,
+    0.0, 0.0, 0.0,
     fill(0.0,num_results), 
     fill(0.0,num_results), 
-    fill(0.0,num_results)) 
+    fill(0.0,num_results),
+    Vector{Float64}(0)) 
+  #=
+  if sn.save_populations
+    sn.saved_population = fill(0.0,sn.N)
+  end
+  =#
+  sn
 end
 
 
@@ -37,10 +49,12 @@ function print_simple_neutral_params( sn::simple_neutral_type )
   print("N: ",sn.N,"  mutstddev: ",sn.mutstddev," ngens: ",sn.ngens,"  initial_value: ",sn.initial_value,"  num_trials: ",sn.num_trials,
         " record_interval: ",sn.record_interval )
   if isdefined(:use_population)
-    println("  use_population: ",use_population) 
-  else 
-    println()
+    print("  use_population: ",use_population) 
   end
+  if isdefined(:save_populations)
+    print("  save_populations: ",save_populations) 
+  end
+  println()
 end
 
 type cummulative_neutral_type
@@ -51,6 +65,7 @@ type cummulative_neutral_type
   num_trials::Int64
   record_interval::Int64
   use_population::Bool     # must be true if N>1
+  save_populations::Bool    # Save the final population for each trial as a column of the CSV file
   count_trials::Int64
   gens_recorded::Vector{Int64}
   attr_mean_sum::Vector{Float64}
@@ -59,13 +74,19 @@ type cummulative_neutral_type
   attr_median_sum_sq::Vector{Float64}
   attr_coef_var_sum::Vector{Float64}
   attr_coef_var_sum_sq::Vector{Float64}
+  saved_populations::Array{Float64,2}
 end
 
 function cummulative_neutral_init( sn::simple_neutral_type )
   num_results = Int(ceil(ngens/record_interval))
-  cummulative_neutral_type( sn.N, sn.mutstddev, sn.ngens, sn.initial_value, sn.num_trials, sn.record_interval, sn.use_population,
-    0, fill(0,num_results), fill(0.0,num_results), fill(0.0,num_results), 
-    fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results)) 
+  csn = cummulative_neutral_type( sn.N, sn.mutstddev, sn.ngens, sn.initial_value, sn.num_trials, sn.record_interval, 
+      sn.use_population, sn.save_populations, 
+      0, fill(0,num_results), fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), 
+      fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), Array{Float64,2}(0,0)) 
+  if sn.save_populations
+    csn.saved_populations = fill(0.0, (sn.N, sn.num_trials) )
+  end
+  csn
 end
 
 
@@ -123,6 +144,10 @@ function simple_neutral_simulation( sn::simple_neutral_type )
       #println("g: ",g,"  attr_mean: ",sn.attr_mean_history[record_index],"  attr_coef_var: ",sn.attr_coef_var_history[record_index])
       record_index += 1
     end
+    if g == (int_burn_in + sn.ngens)
+      #println(" pop: ",pop)
+      sn.saved_population = pop
+    end
     #pop = deepcopy(new_pop)
   end # for g
   @assert sn.ngens == sum_gens
@@ -139,6 +164,7 @@ end
 # S is log of size
 function ces_log( sn::simple_neutral_type )
   cumm_attr_mean = 0.0
+  cumm_attr_median = 0.0
   sum_gens = 0
   record_index = 1
   S = sn.initial_value
@@ -147,9 +173,11 @@ function ces_log( sn::simple_neutral_type )
     sum_gens += 1
     #cumm_attr_mean += S
     cumm_attr_mean += exp(S)
+    cumm_attr_median += exp(S)
     if (g-1) % record_interval == 0
       #sn.attr_mean_history[record_index] = S
       sn.attr_mean_history[record_index] = exp(S)
+      sn.attr_median_history[record_index] = exp(S)
       sn.attr_coef_var_history[record_index] = 0.0
       record_index += 1
     end
@@ -157,6 +185,8 @@ function ces_log( sn::simple_neutral_type )
   @assert sn.ngens == sum_gens
   cumm_attr_mean /= sn.ngens
   sn.average_attr_mean = cumm_attr_mean
+  cumm_attr_median /= sn.ngens
+  sn.average_attr_median = cumm_attr_median
   sn.average_attr_coef_var = 0.0
   return sn
 end
@@ -166,6 +196,7 @@ end
 # See ces_log 
 function ces( sn::simple_neutral_type )
   cumm_attr_mean = 0.0
+  cumm_attr_median = 0.0
   sum_gens = 0
   record_index = 1
   s = sn.initial_value
@@ -176,11 +207,11 @@ function ces( sn::simple_neutral_type )
     end
     s *= mult
     sum_gens += 1
-    #cumm_attr_mean += s
     cumm_attr_mean += s
+    cumm_attr_median += s
     if (g-1) % record_interval == 0
-      #sn.attr_mean_history[record_index] = s
       sn.attr_mean_history[record_index] = s
+      sn.attr_median_history[record_index] = s
       sn.attr_coef_var_history[record_index] = 0.0
       record_index += 1
     end
@@ -188,6 +219,8 @@ function ces( sn::simple_neutral_type )
   @assert sn.ngens == sum_gens
   cumm_attr_mean /= sn.ngens
   sn.average_attr_mean = cumm_attr_mean
+  cumm_attr_median /= sn.ngens
+  sn.average_attr_median = cumm_attr_median
   sn.average_attr_coef_var = 0.0
   return sn
 end
@@ -210,6 +243,9 @@ function accumulate_results( sn::simple_neutral_type, csn::cummulative_neutral_t
     csn.attr_coef_var_sum_sq[i] += sn.attr_coef_var_history[i]^2
   end
   csn.count_trials += 1
+  if csn.save_populations
+    csn.saved_populations[:,csn.count_trials] = sn.saved_population
+  end
 end
 
 function print_results( csn::cummulative_neutral_type )
@@ -253,7 +289,8 @@ function writeheader( stream::IO, csn::cummulative_neutral_type )
     "# num_trials=$(csn.num_trials)",
     "# initial_value=$(csn.initial_value)",
     "# record_interval=$(csn.record_interval)",
-    "# use_population=$(csn.use_population)"
+    "# use_population=$(csn.use_population)",
+    "# use_populations=$(csn.save_populations)"
     ]
   head_strings = [
     "Gen",
@@ -266,6 +303,33 @@ function writeheader( stream::IO, csn::cummulative_neutral_type )
     ]
   write(stream, join(param_strings, "\n"), "\n")
   write(stream, join(head_strings, ","), "\n")
+end
+
+function writeheader_populations( stream::IO, csn::cummulative_neutral_type )
+  param_strings = [
+    "# $(string(Dates.today()))",
+    "# $((simtype==3)?"neutral continuous var model":"invalid simtype")",
+    "# N=$(csn.N)",
+    "# mutation stddev=$(csn.mutstddev)",
+    "# ngens=$(csn.ngens)",
+    "# num_trials=$(csn.num_trials)",
+    "# initial_value=$(csn.initial_value)",
+    "# record_interval=$(csn.record_interval)",
+    "# use_population=$(csn.use_population)",
+    "# use_populations=$(csn.save_populations)"
+    ]
+  head_strings = [ "P$i" for i = 1:csn.num_trials ]
+  write(stream, join(param_strings, "\n"), "\n")
+  write(stream, join(head_strings, ","), "\n")
+end
+
+function writerows_populations( stream::IO, csn::cummulative_neutral_type )
+  for j = 1:csn.N
+    for i = 1:(csn.num_trials-1)
+      @printf(stream,"%.4f,",csn.saved_populations[j,i])
+    end
+    @printf(stream,"%.4f\n",csn.saved_populations[j,csn.num_trials])
+  end
 end
 
 function writerows( stream::IO, csn::cummulative_neutral_type )
@@ -309,16 +373,20 @@ end
 function run_trials( simname::AbstractString )
   global num_trials
   global use_population
+  global save_populations
   if !(simtype == 3 || simtype == 4)
     error("simtype must be 3 or 4 for simple neutral evolution!")
   end
   overall_avg_mean = 0.0
   overall_avg_coef_var = 0.0
-  if isdefined(:use_population)
-    sn = simple_neutral_init( N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population )
-  else
-    sn = simple_neutral_init( N, mutstddev, ngens, initial_value, num_trials, record_interval )
+  if !isdefined(:use_population)
+    use_population = true
   end
+  if !isdefined(:save_populations)
+    save_populations = false
+  end
+  sn = simple_neutral_init( N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population,
+      save_populations )
   csn = cummulative_neutral_init( sn )
   print_simple_neutral_params( sn )
   for t = 1:num_trials
@@ -339,11 +407,26 @@ function run_trials( simname::AbstractString )
   overall_avg_coef_var /= num_trials
   #print_cummulative_neutral( csn )
   #print_results( csn )
-  writeheader( STDOUT, csn )
-  writerows( STDOUT, csn )
-  open("$(simname).csv","w") do stream
-    writeheader( stream, csn )
-    writerows( stream, csn )
+  #=
+  println("saved_populations: ")
+  for i = 1:csn.num_trials
+    println(csn.saved_populations[:,i])
+  end
+  =#
+  if !csn.save_populations
+    writeheader( STDOUT, csn )
+    writerows( STDOUT, csn )
+    open("$(simname).csv","w") do stream
+      writeheader( stream, csn )
+      writerows( stream, csn )
+    end
+  else
+    writeheader_populations( STDOUT, csn )
+    writerows_populations( STDOUT, csn )
+    open("$(simname)_pops.csv","w") do stream
+      writeheader_populations( stream, csn )
+      writerows_populations( stream, csn )
+    end
   end
 end
 

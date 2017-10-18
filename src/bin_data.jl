@@ -1,5 +1,5 @@
 # Create a dictionary that bins a real-valued vector
-#using DataStructures
+using DataStructures
 export create_bins, increment_bins, summarize_bins
 
 # Starting with a list of floats, count the number that are in the intervals [(i-1)/coutff,i/cutoff] for all integers i.
