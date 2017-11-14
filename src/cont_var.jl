@@ -99,14 +99,17 @@ function fitness( attributes::Vector{Float64}, ideal::Vector{Float64}, neutral::
   for k = 1:length(attributes)
     dis += abs( attributes[k] - ideal[k] )
   end
-  #result = 1.0-dis/length(attributes)
-  result = 1.0/(fit_slope*dis+1.0)
-  if result < 0.0
-    #println("negative fitness")
-    #println("fitness: attributes: ",attributes,"  ideal: ",ideal," fit: ",result)
-    result = 0.0
+  if fit_slope == 0.0  # use the older linear method of computing fitness
+    result = 1.0-dis/length(attributes)
+    if result < 0.0
+      #println("negative fitness")
+      #println("fitness: attributes: ",attributes,"  ideal: ",ideal," fit: ",result)
+      result = 0.0
+    end
+    @assert result >= 0.0
+  else  # new method of computing fitness added on 11/14/17
+    result = 1.0/(fit_slope*dis+1.0)
   end
-  @assert result >= 0.0
   return result
 end
 
