@@ -20,6 +20,7 @@ const mutation_stddev_list = [0.04]
 const num_subpops = 1
 const burn_in= 3    # if integer, generations of burn in.  If float, int_burn_in=burn_in*N+50
 const ideal = 1.0
+const fit_slope = 1.0
 #const mu = 0.0
 const neutral = true
 const wrap_attributes=false # wrap attribute values to stay within the interval [0,1]

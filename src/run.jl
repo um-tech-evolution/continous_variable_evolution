@@ -11,10 +11,10 @@ function run_trials( simname::AbstractString )
   println("isdefined N_mut_list: ",isdefined(:N_mut_list))
   if isdefined(:mutation_stddev_list)
     sr = ContVarEvolution.cont_var_result(num_trials,N_list[1],num_subpops,num_attributes_list[1], ngens, burn_in,
-       mutation_stddev_list[1], ideal, wrap_attributes, additive_error, neutral )
+       mutation_stddev_list[1], ideal, fit_slope, wrap_attributes, additive_error, neutral )
   elseif isdefined(:N_mut_list)
     sr = ContVarEvolution.cont_var_result(num_trials,N_list[1],num_subpops,num_attributes_list[1], ngens, burn_in,
-       N_mut_list[1]/N_list[1]/100, ideal, wrap_attributes, additive_error, neutral )
+       N_mut_list[1]/N_list[1]/100, ideal, fit_slope, wrap_attributes, additive_error, neutral )
   end
   sr_list_run = ContVarEvolution.cont_var_result_type[]
   trial=1
@@ -24,7 +24,7 @@ function run_trials( simname::AbstractString )
         for mutation_stddev in mutation_stddev_list
           for trial = 1:num_trials
               sr = ContVarEvolution.cont_var_result(num_trials,N,num_subpops,num_attributes, ngens, burn_in,
-                 mutation_stddev, ideal, wrap_attributes, additive_error, neutral )
+                 mutation_stddev, ideal, fit_slope, wrap_attributes, additive_error, neutral )
               Base.push!(sr_list_run, sr )
           end
         end
@@ -37,7 +37,7 @@ function run_trials( simname::AbstractString )
           for trial = 1:num_trials
             mutation_stddev = N_mut/N
             sr = ContVarEvolution.cont_var_result(num_trials,N,num_subpops,num_attributes, ngens, burn_in,
-                 mutation_stddev, ideal, wrap_attributes, additive_error, neutral )
+                 mutation_stddev, ideal, fit_slope, wrap_attributes, additive_error, neutral )
             int_burn_in = Int(round(burn_in*sr.N+50.0)) 
             println("N: ",N,"  N_mut ",N_mut,"  mutation stddev: ",mutation_stddev,"  int_burn_in: ",int_burn_in)
             Base.push!(sr_list_run, sr )

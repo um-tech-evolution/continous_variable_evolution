@@ -6,14 +6,14 @@ export cont_var_result, print_cont_var_result, run_trial, writeheader, writerow
 #include("types.jl")
   
 function cont_var_result( num_trials, N::Int64, num_subpops::Int64, num_attributes::Int64, ngens::Int64, burn_in::Number,
-     mutation_stddev::Float64, ideal::Float64, wrap_attributes::Bool, additive_error::Bool, neutral::Bool=false )
+     mutation_stddev::Float64, ideal::Float64, fit_slope::Float64, wrap_attributes::Bool, additive_error::Bool, neutral::Bool=false )
   if typeof(burn_in) == Int64
     int_burn_in = burn_in
   else
     int_burn_in = Int(round(burn_in*N+50.0))
   end
   return cont_var_result_type( num_trials, N, num_subpops, num_attributes, ngens, int_burn_in,
-      mutation_stddev, ideal, wrap_attributes, additive_error, neutral, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
+      mutation_stddev, ideal, fit_slope, wrap_attributes, additive_error, neutral, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
 end
 
 function print_cont_var_result( sr::cont_var_result_type )
@@ -22,6 +22,8 @@ function print_cont_var_result( sr::cont_var_result_type )
   println("num_subpops: ", sr.num_subpops)
   println("num_attributes: ", sr.num_attributes)
   println("mutation_stddev: ", sr.mutation_stddev)
+  println("ideal: ",sr.ideal)
+  println("fit_slope: ",sr.fit_slope)
   println("ngens: ", sr.ngens)
   println("wrap attributes: ", sr.wrap_attributes)
   println("additive_error: ", sr.additive_error)
@@ -58,7 +60,8 @@ function writeheader( stream::IO, sr::cont_var_result_type )
     "# additive_error=$(sr.additive_error)",
     "# int_burn_in=$(sr.int_burn_in)",
     "# neutral=$(sr.neutral)",
-    "# ideal=$(sr.ideal)"]
+    "# ideal=$(sr.ideal)",
+    "# fit_slope=$(sr.fit_slope)"]
 
   write(stream,join(param_strings,"\n"),"\n")
   heads = [

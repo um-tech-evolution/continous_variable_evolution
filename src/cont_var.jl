@@ -88,7 +88,6 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
 end
 
 function fitness( attributes::Vector{Float64}, ideal::Vector{Float64}, neutral::Bool )
-  const fit_max = 1.0
   const fit_slope = 1.0
   if length(attributes) != length(ideal)
     error("length(attributes) must equal length(ideal) in fitness")
@@ -96,12 +95,12 @@ function fitness( attributes::Vector{Float64}, ideal::Vector{Float64}, neutral::
   if neutral
     return 1.0
   end
-  sum = 0.0
+  dis = 0.0
   for k = 1:length(attributes)
-    sum += abs( attributes[k] - ideal[k] )
+    dis += abs( attributes[k] - ideal[k] )
   end
-  #result = 1.0-sum/length(attributes)
-  result = 1.0/(fit_slope*sum+1.0/fit_slope)
+  #result = 1.0-dis/length(attributes)
+  result = 1.0/(fit_slope*dis+1.0)
   if result < 0.0
     #println("negative fitness")
     #println("fitness: attributes: ",attributes,"  ideal: ",ideal," fit: ",result)

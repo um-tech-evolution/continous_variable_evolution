@@ -14,6 +14,7 @@ const num_attributes_list = [1,5,10,50]        # number attributes for quantitat
 const ngens = 200       # Generations after burn-in
 const burn_in= 2.0    # generations of burn_in as a multiple of N
 const ideal = 0.5
+const fit_slope = 1.0
 const wrap_attributes=false # wrap attribute values to stay within the interval [0,1]
 const additive_error=false  # use additive error when mutating attributes as opposed to mulitiplicative error
 const neutral = false

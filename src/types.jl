@@ -17,7 +17,8 @@ type cont_var_result_type
   ngens::Int64  # number of generations after burn-in
   int_burn_in::Int64
   mutation_stddev::Float64  # standard deviation of mutation distribution of mutation perturbations
-  ideal::Float64      #maximum ideal value 
+  ideal::Float64             #ideal value 
+  fit_slope::Float64         # fitness = 1.0/(fit_slope*distance(attributes,ideal)+1.0)
   wrap_attributes::Bool      # Keep attributes within the unit interval by wrapping around (so that attribute space is toroidal)
   additive_error::Bool       # If true, use additive rather than multiplicative copy error
   neutral::Bool              # If true, fitness = 1
