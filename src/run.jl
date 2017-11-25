@@ -39,7 +39,7 @@ function run_trials( simname::AbstractString )
             sr = ContVarEvolution.cont_var_result(num_trials,N,num_subpops,num_attributes, ngens, burn_in,
                  mutation_stddev, ideal, fit_slope, wrap_attributes, additive_error, neutral )
             int_burn_in = Int(round(burn_in*sr.N+50.0)) 
-            println("N: ",N,"  N_mut ",N_mut,"  mutation stddev: ",mutation_stddev,"  int_burn_in: ",int_burn_in)
+            #println("N: ",N,"  N_mut ",N_mut,"  mutation stddev: ",mutation_stddev,"  int_burn_in: ",int_burn_in)
             Base.push!(sr_list_run, sr )
           end
         end
@@ -71,4 +71,5 @@ end
 include("$(simname).jl")
 #println("simname: ",simname)
 println("simtype: ",simtype)
+println("num_trials: ",num_trials)
 run_trials( simname )

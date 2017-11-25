@@ -16,7 +16,7 @@ type simple_neutral_type
   record_interval::Int64
   use_population::Bool     # must be true if N>1
   save_populations::Bool    # Save the final population for each trial as a column of the CSV file
-  #use_log_update::Bool     # for now, must be false if N>1
+  log_error::Bool           # use log normally distributed error to work in log space
   average_attr_mean::Float64
   average_attr_median::Float64
   average_attr_coef_var::Float64
@@ -30,11 +30,12 @@ function simple_neutral_init( N::Int64, mutstddev::Float64, ngens::Int64, initia
     record_interval::Int64, use_population::Bool=true, save_population::Bool=false )
   num_results = Int(ceil(ngens/record_interval))
   sn = simple_neutral_type( N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population, save_population,
-    0.0, 0.0, 0.0,
+    log_error, 0.0, 0.0, 0.0,
     fill(0.0,num_results), 
     fill(0.0,num_results), 
     fill(0.0,num_results),
     Vector{Float64}(0)) 
+  println("log_error: ",sn.log_error)
   #=
   if sn.save_populations
     sn.saved_population = fill(0.0,sn.N)
@@ -66,6 +67,7 @@ type cummulative_neutral_type
   record_interval::Int64
   use_population::Bool     # must be true if N>1
   save_populations::Bool    # Save the final population for each trial as a column of the CSV file
+  log_error::Bool
   count_trials::Int64
   gens_recorded::Vector{Int64}
   attr_mean_sum::Vector{Float64}
@@ -80,7 +82,7 @@ end
 function cummulative_neutral_init( sn::simple_neutral_type )
   num_results = Int(ceil(ngens/record_interval))
   csn = cummulative_neutral_type( sn.N, sn.mutstddev, sn.ngens, sn.initial_value, sn.num_trials, sn.record_interval, 
-      sn.use_population, sn.save_populations, 
+      sn.use_population, sn.save_populations, sn.log_error,
       0, fill(0,num_results), fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), 
       fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), Array{Float64,2}(0,0)) 
   if sn.save_populations
@@ -99,27 +101,6 @@ function print_cummulative_neutral( csn::cummulative_neutral_type )
   println("cvar sum sq: ",csn.attr_coef_var_sum_sq)
 end
 
-function copy_pop( sn::simple_neutral_type, pop::Vector{Float64} )
-  i = 1
-  for p in pop
-    rn = randn()
-    #println("rn: ",rn)
-    mult = 1.0 + sn.mutstddev*rn
-    while mult <= 1.e-6
-      rn = randn()
-      #println("rn: ",rn)
-      mult = 1.0 + sn.mutstddev*rn
-    end
-    pop[i] = p*mult
-    if pop[i] <= 0.0
-      println("negative pop member at g= ",g)
-    end
-    i+= 1
-  end
-  return pop
-end
-
-
 function simple_neutral_simulation( sn::simple_neutral_type )
   int_burn_in = 0
   cumm_attr_mean = 0.0
@@ -130,9 +111,9 @@ function simple_neutral_simulation( sn::simple_neutral_type )
   for g = 1:(int_burn_in + sn.ngens )
     i = 1
     #println("before copy g: ",g,"  pop: ",pop)
-    new_pop = copy_pop( sn, pop )
+    new_pop = mutate_pop( sn, pop )
     #println("after copy g: ",g,"  new_pop: ",new_pop)
-    pop = [ new_pop[ rand(1:sn.N) ] for j = 1:sn.N ]
+    pop = [ new_pop[ N>1?rand(1:sn.N):1 ] for j = 1:sn.N ]
     #println("after WF g: ",g,"  pop: ",pop)
     cumm_attr_mean += mean(pop)
     cumm_attr_coef_var += coef_var(pop)
@@ -159,6 +140,74 @@ function simple_neutral_simulation( sn::simple_neutral_type )
   sn.average_attr_coef_var = cumm_attr_coef_var
   return sn
 end
+    
+
+function mutate_pop( sn::simple_neutral_type, pop::Vector{Float64} )
+  i = 1
+  for p in pop
+    rn = randn()
+    #println("rn: ",rn)
+    mult = 1.0 + sn.mutstddev*rn
+    while mult <= 1.e-6
+      rn = randn()
+      #println("rn: ",rn)
+      mult = 1.0 + sn.mutstddev*rn
+    end
+    #println("mult: ",mult)
+    if sn.log_error
+      pop[i] = p+log(mult)
+    else
+      pop[i] = p*mult
+      @assert pop[i] > 0.0
+    end
+    i+= 1
+  end
+  return pop
+end
+
+# Single individual copy error simulation according to Eerkins and Lipo
+# Note that s is the size (not the log of size)
+function ces( sn::simple_neutral_type )
+  cumm_attr_mean = 0.0
+  cumm_attr_median = 0.0
+  sum_gens = 0
+  record_index = 1
+  s = sn.initial_value
+  for g = 1:sn.ngens
+    rn = randn()
+    #println("rn: ",rn)
+    mult = 1.0+sn.mutstddev*rn
+    #println("mult: ",mult)
+    while mult < 1.e-6
+      rn = randn()
+      #println("rn: ",rn)
+      mult = 1.0+sn.mutstddev*rn
+    end
+    if sn.log_error
+      s += log(mult)
+    else
+      s *= mult
+      @assert s > 0.0
+    end
+    #println("s: ",s)
+    sum_gens += 1
+    cumm_attr_mean += s
+    cumm_attr_median += s
+    if (g-1) % record_interval == 0
+      sn.attr_mean_history[record_index] = s
+      sn.attr_median_history[record_index] = s
+      sn.attr_coef_var_history[record_index] = 0.0
+      record_index += 1
+    end
+  end # for g
+  @assert sn.ngens == sum_gens
+  cumm_attr_mean /= sn.ngens
+  sn.average_attr_mean = cumm_attr_mean
+  cumm_attr_median /= sn.ngens
+  sn.average_attr_median = cumm_attr_median
+  sn.average_attr_coef_var = 0.0
+  return sn
+end
 
 # single individual copy error simulation according to Hamilton and Buchanan
 # S is log of size
@@ -178,40 +227,6 @@ function ces_log( sn::simple_neutral_type )
       #sn.attr_mean_history[record_index] = S
       sn.attr_mean_history[record_index] = exp(S)
       sn.attr_median_history[record_index] = exp(S)
-      sn.attr_coef_var_history[record_index] = 0.0
-      record_index += 1
-    end
-  end # for g
-  @assert sn.ngens == sum_gens
-  cumm_attr_mean /= sn.ngens
-  sn.average_attr_mean = cumm_attr_mean
-  cumm_attr_median /= sn.ngens
-  sn.average_attr_median = cumm_attr_median
-  sn.average_attr_coef_var = 0.0
-  return sn
-end
-    
-# Single individual copy error simulation according to Eerkins and Lipo
-# Note that s is the size (not the log of size)
-# See ces_log 
-function ces( sn::simple_neutral_type )
-  cumm_attr_mean = 0.0
-  cumm_attr_median = 0.0
-  sum_gens = 0
-  record_index = 1
-  s = sn.initial_value
-  for g = 1:sn.ngens
-    mult = (1.0+sn.mutstddev*randn())
-    while mult < 1.e-6
-      mult = (1.0+sn.mutstddev*randn())
-    end
-    s *= mult
-    sum_gens += 1
-    cumm_attr_mean += s
-    cumm_attr_median += s
-    if (g-1) % record_interval == 0
-      sn.attr_mean_history[record_index] = s
-      sn.attr_median_history[record_index] = s
       sn.attr_coef_var_history[record_index] = 0.0
       record_index += 1
     end
@@ -290,7 +305,8 @@ function writeheader( stream::IO, csn::cummulative_neutral_type )
     "# initial_value=$(csn.initial_value)",
     "# record_interval=$(csn.record_interval)",
     "# use_population=$(csn.use_population)",
-    "# use_populations=$(csn.save_populations)"
+    "# save_populations=$(csn.save_populations)",
+    "# log_error=$(csn.log_error)"
     ]
   head_strings = [
     "Gen",
@@ -316,7 +332,8 @@ function writeheader_populations( stream::IO, csn::cummulative_neutral_type )
     "# initial_value=$(csn.initial_value)",
     "# record_interval=$(csn.record_interval)",
     "# use_population=$(csn.use_population)",
-    "# use_populations=$(csn.save_populations)"
+    "# save_populations=$(csn.save_populations)",
+    "# log_error=$(csn.log_error)"
     ]
   head_strings = [ "P$i" for i = 1:csn.num_trials ]
   write(stream, join(param_strings, "\n"), "\n")
@@ -374,16 +391,24 @@ function run_trials( simname::AbstractString )
   global num_trials
   global use_population
   global save_populations
+  global log_error    # use log normal error:  work in log space
+  println("rt initial value: ",initial_value)
+  #println("log_error: ",log_error)
   if !(simtype == 3 || simtype == 4)
     error("simtype must be 3 or 4 for simple neutral evolution!")
   end
   overall_avg_mean = 0.0
   overall_avg_coef_var = 0.0
+  # set defaults for parameters that may not be included in the config file.
   if !isdefined(:use_population)
     use_population = true
   end
   if !isdefined(:save_populations)
     save_populations = false
+  end
+  if !isdefined(:log_error)
+    println("log_error not defined")
+    log_error = false
   end
   sn = simple_neutral_init( N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population,
       save_populations )
@@ -447,5 +472,6 @@ end
 println("simname: ",simname)
 include("$(simname).jl")
 println("simtype: ",simtype)
+println("tl initial value: ",initial_value)
 run_trials( simname )
 

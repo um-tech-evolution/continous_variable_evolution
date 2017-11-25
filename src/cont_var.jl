@@ -21,7 +21,7 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
   #int_burn_in = Int(round(sr.burn_in*sr.N+50.0))  # reduce for testing
   id = Int[1]
   n = Int(floor(sr.N/sr.num_subpops))    # size of subpopulations
-  println("N: ",sr.N,"  mutation_stddev: ",sr.mutation_stddev,"  num_attributes: ",sr.num_attributes,"  int_burn_in: ",sr.int_burn_in)
+  #println("N: ",sr.N,"  mutation_stddev: ",sr.mutation_stddev,"  num_attributes: ",sr.num_attributes,"  int_burn_in: ",sr.int_burn_in)
   cumm_fitness_means = zeros(Float64,sr.num_subpops)
   cumm_fitness_coef_vars = zeros(Float64,sr.num_subpops)
   cumm_attr_means = [ zeros(Float64,sr.num_attributes) for i in 1:sr.num_subpops]
@@ -46,8 +46,7 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
     current_variant_id = id[1]
     for j = 1:sr.num_subpops
       for i = 1:n
-        cp = copy_parent( previous_subpops[j][i], id, sr.ideal, variant_table, sr, after_burn_in, fit_diff_counter )
-        subpops[j][i] = cp
+        subpops[j][i] = mutate_attributes( previous_subpops[j][i], id, variant_table, sr, after_burn_in, fit_diff_counter )
       end
       #println("g: ",g,"  pop: ",subpops[j],"  pop attr: ",[ variant_table[subpops[j][i]].attributes[1] for i = 1:n ])
       #subpops[j] = propsel( subpops[j], n, variant_table )
@@ -68,6 +67,11 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
       cumm_attr_means += [ [ mean( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops]
       # cumm_attr_coef_vars[s][i] is the coefficient of variation of attribute i for subpop s, where the mean is over elements of s
       cumm_attr_coef_vars += [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops]
+      if g % 2000 == 1
+        println("fitness_mean: ", [ mean( [variant_table[v].fitness for v in s]) for s in subpops])
+        #println("attr_coef_var: ",  [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops])
+        println("attr mean: ", [ [ mean( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops])
+      end
       count_gens += 1
     end
     clean_up_variant_table(previous_previous_variant_id,previous_variant_id,variant_table)
@@ -113,6 +117,9 @@ function fitness( attributes::Vector{Float64}, ideal::Vector{Float64}, neutral::
   return result
 end
 
+@doc """ function new_innovation()
+  Create a new variant_table record whose attributes are all set to ideal (specificied as an input parameter)
+"""
 function new_innovation( id::Vector{Int64}, ideal::Float64, num_attributes::Int64, variant_table::Dict{Int64,variant_type}, neutral::Bool )
   i = id[1]
   variant_table[i] = variant_type( 0.0, fill( ideal, num_attributes ) )
@@ -123,16 +130,16 @@ function new_innovation( id::Vector{Int64}, ideal::Float64, num_attributes::Int6
 end
 
 
-@doc """  copy_parent()
+@doc """ function mutate_attributes()
+  Mutate the attributes corresponding the variant_table[v].
+  The mutation is actually done by the function mutate().
 """
-function copy_parent( v::Int64, id::Vector{Int64}, 
-    ideal,
-    variant_table::Dict{Int64,ContVarEvolution.variant_type}, 
+function mutate_attributes( v::Int64, id::Vector{Int64}, variant_table::Dict{Int64,ContVarEvolution.variant_type}, 
     sr::ContVarEvolution.cont_var_result_type, after_burn_in::Bool, fit_diff_counter::DataStructures.Accumulator{Int64,Int64} )
   i = id[1]
   vt = variant_table[v]
-  new_attributes = mutate_attributes( vt.attributes, sr.mutation_stddev, sr.wrap_attributes, sr.additive_error )
-  new_fit = fitness( new_attributes, fill( ideal, sr.num_attributes), sr.neutral )
+  new_attributes = mutate( vt.attributes, sr.mutation_stddev, sr.wrap_attributes, sr.additive_error )
+  new_fit = fitness( new_attributes, fill( sr.ideal, sr.num_attributes), sr.neutral )
   if after_burn_in
     increment_bins( fit_diff_counter, new_fit-vt.fitness, 1.0/sr.N )
   end
@@ -143,8 +150,11 @@ function copy_parent( v::Int64, id::Vector{Int64},
   return i
 end  
 
-function mutate_attributes( attributes::Vector{Float64}, mutation_stddev::Float64, wrap_attributes::Bool, additive_error::Bool )
-  #println("mutate attributes  attributes: ",attributes)
+@doc """ function mutate()
+  Mutate the attributes array.
+"""
+function mutate( attributes::Vector{Float64}, mutation_stddev::Float64, wrap_attributes::Bool, additive_error::Bool )
+  #println("mutate:  attributes: ",attributes)
   new_attributes = deepcopy(attributes)
   if wrap_attributes
     for i = 1:length(new_attributes)
@@ -185,6 +195,7 @@ function mutate_attributes( attributes::Vector{Float64}, mutation_stddev::Float6
         end
       end
     end
+    #println("mutate attributes: new_attributes: ",new_attributes)
     return new_attributes
   end
 end

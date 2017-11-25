@@ -12,7 +12,6 @@ const num_trials=2
 @everywhere const N_list = [10]        # Meta-population size list
 #const mutation_stddev = 0.05
 #const num_attributes = 1        # number attributes for quantitative representation
-#const num_attributes = 1        # number attributes for quantitative representation
 const ngens = 1       # Generations after burn-in
 const num_attributes_list = [1]        # number attributes for quantitative representation
 const mutation_stddev_list = [0.04]
