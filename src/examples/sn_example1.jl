@@ -7,8 +7,9 @@ export simtype
 @everywhere simtype = 3
 @everywhere const N = 10        # population size
 const mutstddev = 0.04
-const ngens = 1000
+const ngens = 1001
 const initial_value = 1.0
 const num_trials=1000
 const record_interval = 50
 const log_error = true
+const wright_fisher_copy = false

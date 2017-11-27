@@ -17,6 +17,7 @@ type simple_neutral_type
   use_population::Bool     # must be true if N>1
   save_populations::Bool    # Save the final population for each trial as a column of the CSV file
   log_error::Bool           # use log normally distributed error to work in log space
+  wright_fisher_copy::Bool  # use Wright-Fisher copy to enable population level drift (default true)
   average_attr_mean::Float64
   average_attr_median::Float64
   average_attr_coef_var::Float64
@@ -27,10 +28,11 @@ type simple_neutral_type
 end
 
 function simple_neutral_init( N::Int64, mutstddev::Float64, ngens::Int64, initial_value::Float64, num_trials::Int64, 
-    record_interval::Int64, use_population::Bool=true, save_population::Bool=false )
+    record_interval::Int64, use_population::Bool=true, save_population::Bool=false, 
+    log_error::Bool=false, wright_fisher_copy::Bool=true )
   num_results = Int(ceil(ngens/record_interval))
   sn = simple_neutral_type( N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population, save_population,
-    log_error, 0.0, 0.0, 0.0,
+    log_error, wright_fisher_copy, 0.0, 0.0, 0.0,
     fill(0.0,num_results), 
     fill(0.0,num_results), 
     fill(0.0,num_results),
@@ -56,6 +58,7 @@ function print_simple_neutral_params( sn::simple_neutral_type )
     print("  save_populations: ",save_populations) 
   end
   println()
+  println("log_error: ",sn.log_error,"  wright_fisher_copy: ",sn.wright_fisher_copy)
 end
 
 type cummulative_neutral_type
@@ -68,6 +71,7 @@ type cummulative_neutral_type
   use_population::Bool     # must be true if N>1
   save_populations::Bool    # Save the final population for each trial as a column of the CSV file
   log_error::Bool
+  wright_fisher_copy::Bool
   count_trials::Int64
   gens_recorded::Vector{Int64}
   attr_mean_sum::Vector{Float64}
@@ -82,7 +86,7 @@ end
 function cummulative_neutral_init( sn::simple_neutral_type )
   num_results = Int(ceil(ngens/record_interval))
   csn = cummulative_neutral_type( sn.N, sn.mutstddev, sn.ngens, sn.initial_value, sn.num_trials, sn.record_interval, 
-      sn.use_population, sn.save_populations, sn.log_error,
+      sn.use_population, sn.save_populations, sn.log_error, sn.wright_fisher_copy,
       0, fill(0,num_results), fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), 
       fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), Array{Float64,2}(0,0)) 
   if sn.save_populations
@@ -95,6 +99,7 @@ end
 function print_cummulative_neutral( csn::cummulative_neutral_type )
   println("N: ",csn.N,"  mutstddev: ",csn.mutstddev," ngens: ",csn.ngens," record_interval: ",csn.record_interval,
       "  count_trials: ",csn.count_trials )
+  println("log_error: ",csn.log_error,"  wright_fisher_copy: ",csn.wright_fisher_copy)
   println("mean sum   : ",csn.attr_mean_sum)
   println("mean sum sq: ",csn.attr_mean_sum_sq)
   println("cvar sum   : ",csn.attr_coef_var_sum)
@@ -113,7 +118,11 @@ function simple_neutral_simulation( sn::simple_neutral_type )
     #println("before copy g: ",g,"  pop: ",pop)
     new_pop = mutate_pop( sn, pop )
     #println("after copy g: ",g,"  new_pop: ",new_pop)
-    pop = [ new_pop[ N>1?rand(1:sn.N):1 ] for j = 1:sn.N ]
+    if sn.wright_fisher_copy
+      pop = [ new_pop[ N>1?rand(1:sn.N):1 ] for j = 1:sn.N ]
+    else
+      pop = deepcopy(new_pop)   # not sure if deepcopy is necessary
+    end
     #println("after WF g: ",g,"  pop: ",pop)
     cumm_attr_mean += mean(pop)
     cumm_attr_coef_var += coef_var(pop)
@@ -306,7 +315,8 @@ function writeheader( stream::IO, csn::cummulative_neutral_type )
     "# record_interval=$(csn.record_interval)",
     "# use_population=$(csn.use_population)",
     "# save_populations=$(csn.save_populations)",
-    "# log_error=$(csn.log_error)"
+    "# log_error=$(csn.log_error)",
+    "# wright_fisher_copy=$(csn.wright_fisher_copy)"
     ]
   head_strings = [
     "Gen",
@@ -333,7 +343,8 @@ function writeheader_populations( stream::IO, csn::cummulative_neutral_type )
     "# record_interval=$(csn.record_interval)",
     "# use_population=$(csn.use_population)",
     "# save_populations=$(csn.save_populations)",
-    "# log_error=$(csn.log_error)"
+    "# log_error=$(csn.log_error)",
+    "# wright_fisher_copy=$(csn.wright_fisher_copy)"
     ]
   head_strings = [ "P$i" for i = 1:csn.num_trials ]
   write(stream, join(param_strings, "\n"), "\n")
@@ -392,6 +403,7 @@ function run_trials( simname::AbstractString )
   global use_population
   global save_populations
   global log_error    # use log normal error:  work in log space
+  global wright_fisher_copy  
   println("rt initial value: ",initial_value)
   #println("log_error: ",log_error)
   if !(simtype == 3 || simtype == 4)
@@ -408,10 +420,14 @@ function run_trials( simname::AbstractString )
   end
   if !isdefined(:log_error)
     println("log_error not defined")
-    log_error = false
+    log_error = false    # default is to not use log error
+  end
+  if !isdefined(:wright_fisher_copy)
+    println("wright_fisher_copy not defined")
+    wright_fisher_copy = true     # default is to use wright-fisher copy
   end
   sn = simple_neutral_init( N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population,
-      save_populations )
+      save_populations, log_error, wright_fisher_copy )
   csn = cummulative_neutral_init( sn )
   print_simple_neutral_params( sn )
   for t = 1:num_trials
