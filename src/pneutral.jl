@@ -132,7 +132,7 @@ function simple_neutral_simulation( sn::simple_neutral_type )
     else
       pop = deepcopy(new_pop)   # not sure if deepcopy is necessary
     end
-    println("after WF g: ",g,"  pop: ",pop)
+    #println("after WF g: ",g,"  pop: ",pop)
     cumm_attr_mean += mean(pop)
     cumm_attr_coef_var += coef_var(pop)
     sum_gens += 1
