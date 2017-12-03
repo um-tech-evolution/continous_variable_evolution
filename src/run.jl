@@ -1,4 +1,5 @@
 # Example run:  julia -L ContVarEvolution.jl run.jl examples/example1
+# Example run:  julia -p :4 -L ContVarEvolution.jl run.jl examples/example1
 using ContVarEvolution
 
 function run_trials( simname::AbstractString ) 

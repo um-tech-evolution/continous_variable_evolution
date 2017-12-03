@@ -68,9 +68,9 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
       # cumm_attr_coef_vars[s][i] is the coefficient of variation of attribute i for subpop s, where the mean is over elements of s
       cumm_attr_coef_vars += [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops]
       if g % 2000 == 1
-        println("fitness_mean: ", [ mean( [variant_table[v].fitness for v in s]) for s in subpops])
+        #println("fitness_mean: ", [ mean( [variant_table[v].fitness for v in s]) for s in subpops])
         #println("attr_coef_var: ",  [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops])
-        println("attr mean: ", [ [ mean( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops])
+        #println("attr mean: ", [ [ mean( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops])
       end
       count_gens += 1
     end

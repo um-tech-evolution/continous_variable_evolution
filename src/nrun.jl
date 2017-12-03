@@ -1,6 +1,6 @@
-# Example run:  julia -L NeutralEvolution.jl prun.jl examples/sn_example1
-# Example run:  julia -p 4 -L NeutralEvolution.jl prun.jl examples/sn_example1
-using NeutralEvolution
+# top-level functions to run neutral.jl without parallel map
+# Example run:  julia -L neutral.jl nrun.jl examples/sn_example1
+# Example run:  julia -L neutral.jl nrun.jl examples/sn_example1 <seed>
 
 function run_trials( simname::AbstractString )
   global num_trials
@@ -31,10 +31,8 @@ function run_trials( simname::AbstractString )
       save_populations, log_error, wright_fisher_copy )
   csn = cummulative_neutral_init( sn )
   print_simple_neutral_params( sn )
-  sn_list_run = simple_neutral_type[]
   for t = 1:num_trials
-    #=
-    if sn.N > 1 || sn.use_population
+    if sn.N > 1 || use_population
       sn = simple_neutral_simulation( sn )
     elseif sn.N == 1
       #sn = ces_log( sn )
@@ -42,17 +40,10 @@ function run_trials( simname::AbstractString )
     else
       error(" sn.N must be positive ")
     end
-    =#
-    Base.push!(sn_list_run,deepcopy(sn))
     #println("trial: ",t,"  avg mean: ",sn.average_attr_mean,"  avg coef var: ",sn.average_attr_coef_var )
     #println("mean history: ",sn.attr_mean_history)
     #println("coef_var history: ",sn.attr_coef_var_history)
-  end
-  run_sim = (sn.N > 1 || sn.use_population) ? simple_neutral_simulation : ces 
-  sn_list_result = pmap( run_sim, sn_list_run )
-  #for t = 1:num_trials
-  for rsn in sn_list_result
-    accumulate_results( rsn, csn )
+    accumulate_results( sn, csn )
   end
   #print_cummulative_neutral( csn )
   #print_results( csn )
@@ -77,6 +68,10 @@ function run_trials( simname::AbstractString )
       writerows_populations( stream, csn )
     end
   end
+end
+
+function coef_var( lst )
+  return std(lst)/mean(lst)
 end
 
 if length(ARGS) == 0

@@ -11,5 +11,5 @@ const ngens = 1001
 const initial_value = 1.0
 const num_trials=1000
 const record_interval = 50
-const log_error = true
+const log_error = false
 const wright_fisher_copy = false

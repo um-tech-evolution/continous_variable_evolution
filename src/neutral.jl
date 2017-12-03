@@ -1,13 +1,22 @@
 # Simple Wright-Fisher model for neutral continuous variable evolution
-# Command line:  julia simple_neutral.jl
-# Command line:  julia simple_neutral.jl <seed>
+# Example runs with parallel map over trais.
+# Example run:  julia -L NeutralEvolution.jl prun.jl examples/sn_example1
+# Example run:  julia -L NeutralEvolution.jl prun.jl examples/sn_example1 <seed>
+# Example run:  julia -p 4 -L NeutralEvolution.jl prun.jl examples/sn_example1
+# Example runs without parallel map over trais.
+# Example run:  julia -L neutral.jl nrun.jl examples/sn_example1
+# Example run:  julia -L neutral.jl nrun.jl examples/sn_example1 <seed>
 #    where seed is a random number seed.
 # When run with a specific seed, the output should agree running the full simulation
 #    for neutral multiplicative error with a single attribute (with the same seed).
+export simple_neutral_type, simple_neutral_init, cummulative_neutral_type, cummulative_neutral_init,
+      print_simple_neutral_params, simple_neutral_simulation, ces, accumulate_results, writeheader,
+      writerows, writeheader_populations, writerows_populations
 using DataFrames
 using CSV
 
 type simple_neutral_type
+  simtype::Int64
   N::Int64   # popsize
   mutstddev::Float64
   ngens::Int64
@@ -27,11 +36,12 @@ type simple_neutral_type
   saved_population::Vector{Float64}
 end
 
-function simple_neutral_init( N::Int64, mutstddev::Float64, ngens::Int64, initial_value::Float64, num_trials::Int64, 
+function simple_neutral_init( simtype::Int64,N::Int64, mutstddev::Float64, ngens::Int64, initial_value::Float64, num_trials::Int64, 
     record_interval::Int64, use_population::Bool=true, save_population::Bool=false, 
     log_error::Bool=false, wright_fisher_copy::Bool=true )
+  println("init: simtype: ",simtype)
   num_results = Int(ceil(ngens/record_interval))
-  sn = simple_neutral_type( N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population, save_population,
+  sn = simple_neutral_type( simtype, N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population, save_population,
     log_error, wright_fisher_copy, 0.0, 0.0, 0.0,
     fill(0.0,num_results), 
     fill(0.0,num_results), 
@@ -52,16 +62,17 @@ function print_simple_neutral_params( sn::simple_neutral_type )
   print("N: ",sn.N,"  mutstddev: ",sn.mutstddev," ngens: ",sn.ngens,"  initial_value: ",sn.initial_value,"  num_trials: ",sn.num_trials,
         " record_interval: ",sn.record_interval )
   if isdefined(:use_population)
-    print("  use_population: ",use_population) 
+    print("  use_population: ",sn.use_population) 
   end
   if isdefined(:save_populations)
-    print("  save_populations: ",save_populations) 
+    print("  save_populations: ",sn.save_populations) 
   end
   println()
   println("log_error: ",sn.log_error,"  wright_fisher_copy: ",sn.wright_fisher_copy)
 end
 
 type cummulative_neutral_type
+  simtype::Int64
   N::Int64  # popsize
   mutstddev::Float64
   ngens::Int64
@@ -84,8 +95,8 @@ type cummulative_neutral_type
 end
 
 function cummulative_neutral_init( sn::simple_neutral_type )
-  num_results = Int(ceil(ngens/record_interval))
-  csn = cummulative_neutral_type( sn.N, sn.mutstddev, sn.ngens, sn.initial_value, sn.num_trials, sn.record_interval, 
+  num_results = Int(ceil(sn.ngens/sn.record_interval))
+  csn = cummulative_neutral_type( sn.simtype, sn.N, sn.mutstddev, sn.ngens, sn.initial_value, sn.num_trials, sn.record_interval, 
       sn.use_population, sn.save_populations, sn.log_error, sn.wright_fisher_copy,
       0, fill(0,num_results), fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), 
       fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), Array{Float64,2}(0,0)) 
@@ -119,7 +130,7 @@ function simple_neutral_simulation( sn::simple_neutral_type )
     new_pop = mutate_pop( sn, pop )
     #println("after copy g: ",g,"  new_pop: ",new_pop)
     if sn.wright_fisher_copy
-      pop = [ new_pop[ N>1?rand(1:sn.N):1 ] for j = 1:sn.N ]
+      pop = [ new_pop[ sn.N>1?rand(1:sn.N):1 ] for j = 1:sn.N ]
     else
       pop = deepcopy(new_pop)   # not sure if deepcopy is necessary
     end
@@ -127,7 +138,7 @@ function simple_neutral_simulation( sn::simple_neutral_type )
     cumm_attr_mean += mean(pop)
     cumm_attr_coef_var += coef_var(pop)
     sum_gens += 1
-    if (g-1) % record_interval == 0
+    if (g-1) % sn.record_interval == 0
       sn.attr_mean_history[record_index] = mean(pop)
       sn.attr_median_history[record_index] = median(pop)
       sn.attr_coef_var_history[record_index] = coef_var(pop)
@@ -253,7 +264,7 @@ function accumulate_results( sn::simple_neutral_type, csn::cummulative_neutral_t
   num_results = Int(ceil(sn.ngens/sn.record_interval))
   record_index = 1
   for g = 1:sn.ngens
-    if (g-1) % record_interval == 0
+    if (g-1) % sn.record_interval == 0
       csn.gens_recorded[record_index] = g
       record_index += 1
     end
@@ -306,7 +317,7 @@ end
 function writeheader( stream::IO, csn::cummulative_neutral_type )
   param_strings = [
     "# $(string(Dates.today()))",
-    "# $((simtype==3)?"neutral continuous var model":"invalid simtype")",
+    "# $((csn.simtype==3)?"neutral continuous var model simtype==3":"invalid simtype")",
     "# N=$(csn.N)",
     "# mutation stddev=$(csn.mutstddev)",
     "# ngens=$(csn.ngens)",
@@ -334,7 +345,7 @@ end
 function writeheader_populations( stream::IO, csn::cummulative_neutral_type )
   param_strings = [
     "# $(string(Dates.today()))",
-    "# $((simtype==3)?"neutral continuous var model":"invalid simtype")",
+    "# $((csn.simtype==3)?"neutral continuous var model simtype==3":"invalid simtype")",
     "# N=$(csn.N)",
     "# mutation stddev=$(csn.mutstddev)",
     "# ngens=$(csn.ngens)",
@@ -396,92 +407,7 @@ function writerows( stream::IO, csn::cummulative_neutral_type )
     write(stream, join(values,","), "\n")
   end
 end
-  
-
-function run_trials( simname::AbstractString )
-  global num_trials
-  global use_population
-  global save_populations
-  global log_error    # use log normal error:  work in log space
-  global wright_fisher_copy  
-  #println("log_error: ",log_error)
-  if !(simtype == 3 || simtype == 4)
-    error("simtype must be 3 or 4 for simple neutral evolution!")
-  end
-  # set defaults for parameters that may not be included in the config file.
-  if !isdefined(:use_population)
-    use_population = true
-  end
-  if !isdefined(:save_populations)
-    save_populations = false
-  end
-  if !isdefined(:log_error)
-    println("log_error not defined")
-    log_error = false    # default is to not use log error
-  end
-  if !isdefined(:wright_fisher_copy)
-    println("wright_fisher_copy not defined")
-    wright_fisher_copy = true     # default is to use wright-fisher copy
-  end
-  sn = simple_neutral_init( N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population,
-      save_populations, log_error, wright_fisher_copy )
-  csn = cummulative_neutral_init( sn )
-  print_simple_neutral_params( sn )
-  for t = 1:num_trials
-    if sn.N > 1 || use_population
-      sn = simple_neutral_simulation( sn )
-    elseif sn.N == 1
-      #sn = ces_log( sn )
-      sn = ces( sn )
-    else
-      error(" sn.N must be positive ")
-    end
-    #println("trial: ",t,"  avg mean: ",sn.average_attr_mean,"  avg coef var: ",sn.average_attr_coef_var )
-    #println("mean history: ",sn.attr_mean_history)
-    #println("coef_var history: ",sn.attr_coef_var_history)
-    accumulate_results( sn, csn )
-  end
-  #print_cummulative_neutral( csn )
-  #print_results( csn )
-  #=
-  println("saved_populations: ")
-  for i = 1:csn.num_trials
-    println(csn.saved_populations[:,i])
-  end
-  =#
-  if !csn.save_populations
-    writeheader( STDOUT, csn )
-    writerows( STDOUT, csn )
-    open("$(simname).csv","w") do stream
-      writeheader( stream, csn )
-      writerows( stream, csn )
-    end
-  else
-    writeheader_populations( STDOUT, csn )
-    writerows_populations( STDOUT, csn )
-    open("$(simname)_pops.csv","w") do stream
-      writeheader_populations( stream, csn )
-      writerows_populations( stream, csn )
-    end
-  end
-end
 
 function coef_var( lst )
   return std(lst)/mean(lst)
 end
-
-if length(ARGS) == 0
-  simname = "examples/sn_example1"
-else
-  simname = ARGS[1]
-  if length(ARGS) >= 2   # second command-line argument is random number seed
-    seed = parse(Int,ARGS[2])
-    println("seed: ",seed)
-    srand(seed)
-  end
-end
-println("simname: ",simname)
-include("$(simname).jl")
-println("simtype: ",simtype)
-run_trials( simname )
-

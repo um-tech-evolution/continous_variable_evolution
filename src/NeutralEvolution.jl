@@ -1,5 +1,5 @@
 module NeutralEvolution
-include("pneutral.jl")
+include("neutral.jl")
 end
 using Distributions
 using DataStructures
