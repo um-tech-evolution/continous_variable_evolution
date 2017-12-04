@@ -51,9 +51,13 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
       #println("g: ",g,"  pop: ",subpops[j],"  pop attr: ",[ variant_table[subpops[j][i]].attributes[1] for i = 1:n ])
       #subpops[j] = propsel( subpops[j], n, variant_table )
       if sr.neutral
-        new_subpop = deepcopy(subpops[j])
-        subpops[j] = [ new_subpop[ rand(1:n) ] for j = 1:n ]
-        #println("g: ",g," j: ",j," new_subpop: ",subpops[j])
+        #new_subpop = deepcopy(subpops[j])
+        r = rand(1:n,n)
+        #println("r: ",r)
+        #subpops[j] = new_subpop[ r ]
+        subpops[j] = subpops[j][ r ]
+        #print("g: ",g," j: ",j," new_subpop: ",subpops[j],"  pop attr: ",[ variant_table[subpops[1][i]].attributes[1] for i = 1:n ])
+        #println("  coef var: ",[ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops])
       else
         subpops[j] = propsel( subpops[j], n, variant_table )
       end
@@ -67,11 +71,11 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
       cumm_attr_means += [ [ mean( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops]
       # cumm_attr_coef_vars[s][i] is the coefficient of variation of attribute i for subpop s, where the mean is over elements of s
       cumm_attr_coef_vars += [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops]
-      if g % 2000 == 1
+      #if g % 2000 == 1
         #println("fitness_mean: ", [ mean( [variant_table[v].fitness for v in s]) for s in subpops])
         #println("attr_coef_var: ",  [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops])
         #println("attr mean: ", [ [ mean( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops])
-      end
+      #end
       count_gens += 1
     end
     clean_up_variant_table(previous_previous_variant_id,previous_variant_id,variant_table)

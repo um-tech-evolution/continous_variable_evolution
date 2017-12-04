@@ -11,7 +11,7 @@
 #    for neutral multiplicative error with a single attribute (with the same seed).
 export simple_neutral_type, simple_neutral_init, cummulative_neutral_type, cummulative_neutral_init,
       print_simple_neutral_params, simple_neutral_simulation, ces, accumulate_results, writeheader,
-      writerows, writeheader_populations, writerows_populations
+      writerows, writeheader_populations, writerows_populations, coef_var
 using DataFrames
 using CSV
 
@@ -128,9 +128,16 @@ function simple_neutral_simulation( sn::simple_neutral_type )
     i = 1
     #println("before copy g: ",g,"  pop: ",pop)
     new_pop = mutate_pop( sn, pop )
-    #println("after copy g: ",g,"  new_pop: ",new_pop)
+    #println("after mutate g: ",g,"  new_pop: ",new_pop)
     if sn.wright_fisher_copy
-      pop = [ new_pop[ sn.N>1?rand(1:sn.N):1 ] for j = 1:sn.N ]
+      #pop = [ new_pop[ sn.N>1?rand(1:sn.N):1 ] for j = 1:sn.N ]
+      if sn.N > 1
+        r = rand(1:sn.N,sn.N)
+      else
+        r = fill(1,sn.N)
+      end
+      #println("r: ",r)
+      pop = new_pop[r]
     else
       pop = deepcopy(new_pop)   # not sure if deepcopy is necessary
     end
