@@ -60,7 +60,7 @@ function run_trials( simname::AbstractString )
 end    
 
 if length(ARGS) == 0
-  simname = "configs/example2"
+  simname = "examples/example2"
 else
   simname = ARGS[1]
   if length(ARGS) >= 2   # second command-line argument is random number seed

@@ -1,5 +1,6 @@
 # Create a dictionary that bins a real-valued vector
-using DataStructures
+import DataStructures.Accumulator
+import DataStructures.counter
 export create_bins, increment_bins, summarize_bins
 
 # Starting with a list of floats, count the number that are in the intervals [(i-1)/coutff,i/cutoff] for all integers i.
@@ -12,7 +13,7 @@ function create_bins( vect::Vector{Float64}, cutoff::Float64 )
   bins
 end
 
-function increment_bins( bins::DataStructures.Accumulator{Int64,Int64}, x::Float64, cutoff::Float64 )
+function increment_bins( bins::Accumulator{Int64,Int64}, x::Float64, cutoff::Float64 )
   index = Int(floor(x/cutoff))
   push!(bins, index)
 end  
@@ -45,7 +46,7 @@ function check_bins( vect::Vector{Float64}, cutoff::Float64 )
   end
 end
 
-function summarize_bins( bins::DataStructures.Accumulator{Int64,Int64} )
+function summarize_bins( bins::Accumulator{Int64,Int64} )
   min = minimum(keys(bins))
   max = maximum(keys(bins))
   neg_neutral = bins[-1]

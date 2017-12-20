@@ -1,6 +1,8 @@
 # ContVar structure simulation with horizontal transfer
 export cont_var_simulation, fitness
-using DataStructures
+#using DataStructures
+import DataStructures.counter
+import DataStructures.Accumulator
 #=
 Recommended command line to run:
 >  julia -L ContVarEvolution.jl run_cv.jl configs/example1
@@ -16,7 +18,7 @@ Recommended command line to run:
     variant_table Keeps track fitnesses and variant parent and innovation ancestor
 """
 function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
-  fit_diff_counter = DataStructures.counter(Int64)
+  fit_diff_counter = counter(Int64)
   variant_table = Dict{Int64,variant_type}()
   #int_burn_in = Int(round(sr.burn_in*sr.N+50.0))  # reduce for testing
   id = Int[1]
@@ -139,7 +141,7 @@ end
   The mutation is actually done by the function mutate().
 """
 function mutate_attributes( v::Int64, id::Vector{Int64}, variant_table::Dict{Int64,ContVarEvolution.variant_type}, 
-    sr::ContVarEvolution.cont_var_result_type, after_burn_in::Bool, fit_diff_counter::DataStructures.Accumulator{Int64,Int64} )
+    sr::ContVarEvolution.cont_var_result_type, after_burn_in::Bool, fit_diff_counter::Accumulator{Int64,Int64} )
   i = id[1]
   vt = variant_table[v]
   new_attributes = mutate( vt.attributes, sr.mutation_stddev, sr.wrap_attributes, sr.additive_error )
@@ -190,7 +192,7 @@ function mutate( attributes::Vector{Float64}, mutation_stddev::Float64, wrap_att
         end
         multiplier = (1.0+mutation_stddev*randn())
         while multiplier <= 1.0e-6
-          println("neg multiplier")
+          #println("neg multiplier")
           multiplier = (1.0+mutation_stddev*randn())
         end
         new_attributes[i] *= multiplier
@@ -215,7 +217,7 @@ function print_pop( stream::IO, subpops::PopList, variant_table::Dict{Int64,vari
   println(stream)
 end
 
-using DataFrames
+#using DataFrames
 # compute and save statistics about subpopulations and populations
 
 function means( subpops::PopList, variant_table::Dict{Int64,variant_type} )
