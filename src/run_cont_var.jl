@@ -13,7 +13,7 @@ function cont_var_result( num_trials, N::Int64, num_subpops::Int64, num_attribut
     int_burn_in = Int(round(burn_in*N+50.0))
   end
   return cont_var_result_type( num_trials, N, num_subpops, num_attributes, ngens, int_burn_in,
-      mutation_stddev, ideal, fit_slope, wrap_attributes, additive_error, neutral, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
+      mutation_stddev, ideal, fit_slope, wrap_attributes, additive_error, neutral, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
 end
 
 function print_cont_var_result( sr::cont_var_result_type )
@@ -30,8 +30,10 @@ function print_cont_var_result( sr::cont_var_result_type )
   println("burn_in: ", sr.burn_in)
   println("neutral: ", sr.neutral )
   println("fitness_mean: ", sr.fitness_mean)
+  println("fitness_median: ", sr.fitness_mean)
   println("fitness_coef_var: ", sr.fitness_coef_var)
   println("attiribute_mean: ", sr.attribute_mean)
+  println("attiribute_median: ", sr.attribute_mean)
   println("attiribute_coef_var: ", sr.attribute_coef_var)
   println("fit diff neg count: ",sr.neg_count)
   println("fit diff neg neutral: ",sr.neg_neutral)
@@ -68,35 +70,52 @@ function writeheader( stream::IO, sr::cont_var_result_type )
     "N",
     "N_mut",
     "mutation_stddev",
-    #"num_emigrants",
     "num_attributes",
-    "fitness_mean",
-    "fitness_coef_var",
+    "int_burn_in",
     "attribute_mean",
-    "attribute_coef_var",
+    "attribute_median",
+    "attribute_coef_var"
+  ]
+  fitness_heads = [
+    "fitness_mean",
+    "fitness_median",
+    "fitness_coef_var",
     "fit_diff_neg_fract",
     "fit_diff_neg_neutral",
     "fit_diff_pos_neutral",
-    "fit_diff_pos_fract"]
+    "fit_diff_pos_fract"
+  ]
+  if !sr.neutral
+    heads = vcat(heads,fitness_heads)
+  end
   write(stream,join(heads,","),"\n")
 end
     
 function writerow( stream::IO, trial::Int64, sr::cont_var_result_type )
   sum_fitdiff = Float64(sum( (sr.neg_count, sr.neg_neutral, sr.pos_neutral, sr.pos_count) ))
-  line = Any[
+  values = Any[
           sr.N,
           sr.N*sr.mutation_stddev,
           sr.mutation_stddev,
           sr.num_attributes,
-          sr.fitness_mean,
-          sr.fitness_coef_var,
+          sr.int_burn_in,
           sr.attribute_mean,
-          sr.attribute_coef_var,
+          sr.attribute_median,
+          sr.attribute_coef_var
+  ]
+  fitness_values = [
+          sr.fitness_mean,
+          sr.fitness_median,
+          sr.fitness_coef_var,
           sr.neg_count/sum_fitdiff,
           sr.neg_neutral/sum_fitdiff,
           sr.pos_neutral/sum_fitdiff,
-          sr.pos_count/sum_fitdiff]
-  write(stream,join(line,","),"\n")
+          sr.pos_count/sum_fitdiff
+  ]
+  if !sr.neutral
+    values = vcat(values,fitness_values)
+  end
+  write(stream,join(values,","),"\n")
 end
 
 

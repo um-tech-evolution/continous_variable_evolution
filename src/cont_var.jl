@@ -25,8 +25,10 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
   n = Int(floor(sr.N/sr.num_subpops))    # size of subpopulations
   #println("N: ",sr.N,"  mutation_stddev: ",sr.mutation_stddev,"  num_attributes: ",sr.num_attributes,"  int_burn_in: ",sr.int_burn_in)
   cumm_fitness_means = zeros(Float64,sr.num_subpops)
+  cumm_fitness_medians = zeros(Float64,sr.num_subpops)
   cumm_fitness_coef_vars = zeros(Float64,sr.num_subpops)
   cumm_attr_means = [ zeros(Float64,sr.num_attributes) for i in 1:sr.num_subpops]
+  cumm_attr_medians = [ zeros(Float64,sr.num_attributes) for i in 1:sr.num_subpops]
   cumm_attr_coef_vars = [ zeros(Float64,sr.num_attributes) for i in 1:sr.num_subpops]
   count_gens = 0
   subpops = PopList()
@@ -68,9 +70,12 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
     previous_subpops = deepcopy(subpops)
     if after_burn_in
       cumm_fitness_means += [ mean( [variant_table[v].fitness for v in s]) for s in subpops]
+      cumm_fitness_medians += [ median( [variant_table[v].fitness for v in s]) for s in subpops]
       cumm_fitness_coef_vars += [ coef_var( [variant_table[v].fitness for v in s]) for s in subpops]
       # cumm_attr_means[s][i] is the mean of attribute i for subpop s, where the mean is over elements of s
       cumm_attr_means += [ [ mean( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops]
+      # cumm_attr_means[s][i] is the median of attribute i for subpop s, where the median is over elements of s
+      cumm_attr_medians += [ [ median( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops]
       # cumm_attr_coef_vars[s][i] is the coefficient of variation of attribute i for subpop s, where the mean is over elements of s
       cumm_attr_coef_vars += [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:sr.num_attributes ] for s in subpops]
       #if g % 2000 == 1
@@ -84,14 +89,18 @@ function cont_var_simulation( sr::ContVarEvolution.cont_var_result_type )
   end  # for g
   @assert count_gens == sr.ngens
   cumm_fitness_means /= sr.ngens
+  cumm_fitness_medians /= sr.ngens
   cumm_fitness_coef_vars /= sr.ngens
   cumm_attr_means /= sr.ngens
+  cumm_attr_medians /= sr.ngens
   cumm_attr_coef_vars /= sr.ngens
   # The next 2 means are over subpops
   sr.fitness_mean = mean(cumm_fitness_means)
+  sr.fitness_median = mean(cumm_fitness_medians)
   sr.fitness_coef_var = mean(cumm_fitness_coef_vars)
   # The next 2 means are over attributes and subpops
   sr.attribute_mean = mean(mean(cumm_attr_means))
+  sr.attribute_median = mean(mean(cumm_attr_medians))
   sr.attribute_coef_var = mean(mean(cumm_attr_coef_vars))
   (sr.neg_count, sr.neg_neutral, sr.pos_neutral, sr.pos_count ) = summarize_bins( fit_diff_counter )
   return sr
