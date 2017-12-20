@@ -60,7 +60,6 @@ function writeheader( stream::IO, sr::cont_var_result_type )
     "# ngens=$(sr.ngens)",
     "# wrap_attributes =$(sr.wrap_attributes)",
     "# additive_error=$(sr.additive_error)",
-    "# int_burn_in=$(sr.int_burn_in)",
     "# neutral=$(sr.neutral)",
     "# ideal=$(sr.ideal)",
     "# fit_slope=$(sr.fit_slope)"]
