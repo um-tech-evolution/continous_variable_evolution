@@ -5,7 +5,7 @@ export create_bins, increment_bins, summarize_bins
 
 # Starting with a list of floats, count the number that are in the intervals [(i-1)/coutff,i/cutoff] for all integers i.
 function create_bins( vect::Vector{Float64}, cutoff::Float64 )
-  bins = DataStructures.counter(Int64)
+  bins = counter(Int64)
   for v in vect
     index = Int(floor(v/cutoff))
     push!(bins, index)

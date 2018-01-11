@@ -8,8 +8,8 @@ function run_trials( simname::AbstractString )
   #circular_variation = extreme_variation = false
   stream = open("$(simname).csv","w")
   println("stream: ",stream)
-  println("isdefined mutation_stddev_list: ",isdefined(:mutation_stddev_list))
-  println("isdefined N_mut_list: ",isdefined(:N_mut_list))
+  #println("isdefined mutation_stddev_list: ",isdefined(:mutation_stddev_list))
+  #println("isdefined N_mut_list: ",isdefined(:N_mut_list))
   if isdefined(:mutation_stddev_list)
     sr = ContVarEvolution.cont_var_result(num_trials,N_list[1],num_subpops,num_attributes_list[1], ngens, burn_in,
        mutation_stddev_list[1], ideal, fit_slope, wrap_attributes, additive_error, neutral )

@@ -44,8 +44,8 @@ end
 function writeheader( stream::IO, sr::cont_var_result_type )
   global mutation_stddev_list
   global N_mut_list
-  println("isdefined mutation_stddev_list: ",isdefined(:mutation_stddev_list))
-  println("isdefined N_mut_list: ",isdefined(:N_mut_list))
+  #println("isdefined mutation_stddev_list: ",isdefined(:mutation_stddev_list))
+  #println("isdefined N_mut_list: ",isdefined(:N_mut_list))
   if isdefined(:N_mut_list)
     N_mut_string = "# using N_mut_list"
   elseif isdefined(:mutation_stddev_list)

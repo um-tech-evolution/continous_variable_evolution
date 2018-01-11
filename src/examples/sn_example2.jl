@@ -9,7 +9,8 @@ export simtype
 const mutstddev = 0.04
 const ngens = 6
 const initial_value = 1.0
-const num_trials=8
+const num_trials=3
 const record_interval = 2
 const use_population=true
 const save_populations=true
+const conformist_probability=1.0
