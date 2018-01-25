@@ -7,20 +7,16 @@ or
 =#
 export simtype
 @everywhere simtype = 2    
-const num_trials=2
-#@everywhere const N = 8        # Meta-population size
+const num_trials=1
 @everywhere const N_list = [3]        # Meta-population size list
+#@everywhere const N = 8        # Meta-population size
 #const mutation_stddev = 0.05
-#const num_attributes = 1        # number attributes for quantitative representation
-const ngens = 1       # Generations after burn-in
-const num_attributes_list = [1]        # number attributes for quantitative representation
 const mutation_stddev_list = [0.04]
-#N_mut_list = [1.0]
+#const num_attributes = 2        # number attributes for quantitative representation
+const num_attributes_list = [2]        # number attributes for quantitative representation
+const ngens = 3       # Generations after burn-in
 const num_subpops = 1
 const burn_in= 0    # if integer, generations of burn in.  If float, int_burn_in=burn_in*N+50
 const ideal = 1.0
 const fit_slope = 1.0
-#const mu = 0.0
-const neutral = true
-const wrap_attributes=false # wrap attribute values to stay within the interval [0,1]
-const additive_error=false  # use additive error when mutating attributes as opposed to mulitiplicative error
+const neutral = false

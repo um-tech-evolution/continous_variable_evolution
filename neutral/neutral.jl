@@ -8,7 +8,7 @@
 #    for neutral multiplicative error with a single attribute (with the same seed).
 export simple_neutral_type, simple_neutral_init, cummulative_neutral_type, cummulative_neutral_init,
       print_simple_neutral_params, simple_neutral_simulation, ces, accumulate_results, writeheader,
-      writerows, writeheader_populations, writerows_populations, coef_var 
+      writerows, writeheader_populations, writerows_populations, coef_var, inverse_fitness
 
 type simple_neutral_type
   simtype::Int64
@@ -23,6 +23,9 @@ type simple_neutral_type
   log_error::Bool           # use log normally distributed error to work in log space
   wright_fisher_copy::Bool  # use Wright-Fisher copy to enable population level drift (default true)
   conformist_probability::Float64   # Probability of copying the mean population value rather than Wright-Fisher copy
+  neutral::Bool             # if true, no selection 
+  fit_slope::Float64        # Slope of the inverse fitness function.  0.0 means neutral
+  fit_funct::Function       # Fitness function
   average_attr_mean::Float64
   average_attr_median::Float64
   average_attr_coef_var::Float64
@@ -32,12 +35,18 @@ type simple_neutral_type
   saved_population::Vector{Float64}
 end
 
+function inverse_fitness( a::Float64, initial_value::Float64, fit_slope::Float64=1.0 )
+  return 1.0/(abs(fit_slope*a-initial_value)+1.0)
+end
+
 function simple_neutral_init( simtype::Int64,N::Int64, mutstddev::Float64, ngens::Int64, initial_value::Float64, num_trials::Int64, 
     record_interval::Int64, use_population::Bool=true, save_population::Bool=false, 
-    log_error::Bool=false, wright_fisher_copy::Bool=true, conformist_probability::Float64=0.0 )
+    log_error::Bool=false, wright_fisher_copy::Bool=true, conformist_probability::Float64=0.0, neutral::Bool=true,
+    fit_slope::Float64=1.0, fit_funct::Function=inverse_fitness)
   num_results = Int(ceil(ngens/record_interval))
   sn = simple_neutral_type( simtype, N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population, save_population,
-    log_error, wright_fisher_copy, conformist_probability, 0.0, 0.0, 0.0,
+    log_error, wright_fisher_copy, conformist_probability, neutral, fit_slope, inverse_fitness,
+    0.0, 0.0, 0.0,
     fill(0.0,num_results),
     fill(0.0,num_results), 
     fill(0.0,num_results),
@@ -48,7 +57,7 @@ end
 
 function print_simple_neutral_params( sn::simple_neutral_type )
   global use_population
-  print("N: ",sn.N,"  mutstddev: ",sn.mutstddev," ngens: ",sn.ngens,"  initial_value: ",sn.initial_value,"  num_trials: ",sn.num_trials,
+  println("N: ",sn.N,"  mutstddev: ",sn.mutstddev," ngens: ",sn.ngens,"  initial_value: ",sn.initial_value,"  num_trials: ",sn.num_trials,
         " record_interval: ",sn.record_interval )
   if isdefined(:use_population)
     print("  use_population: ",sn.use_population)
@@ -58,6 +67,9 @@ function print_simple_neutral_params( sn::simple_neutral_type )
   end
   if isdefined(:conformist_probability)
     println("  conformist_probability: ",sn.conformist_probability) 
+  end
+  if isdefined(:fit_slope)
+    println("  fit_slope: ",sn.fit_slope) 
   end
   println()
   #println("log_error: ",sn.log_error,"  wright_fisher_copy: ",sn.wright_fisher_copy)
@@ -76,6 +88,8 @@ type cummulative_neutral_type
   log_error::Bool
   wright_fisher_copy::Bool
   conformist_probability::Float64
+  neutral::Bool
+  fit_slope::Float64
   count_trials::Int64
   gens_recorded::Vector{Int64}
   attr_mean_sum::Vector{Float64}
@@ -90,7 +104,7 @@ end
 function cummulative_neutral_init( sn::simple_neutral_type )
   num_results = Int(ceil(sn.ngens/sn.record_interval))
   csn = cummulative_neutral_type( sn.simtype, sn.N, sn.mutstddev, sn.ngens, sn.initial_value, sn.num_trials, sn.record_interval,
-      sn.use_population, sn.save_populations, sn.log_error, sn.wright_fisher_copy, sn.conformist_probability,
+      sn.use_population, sn.save_populations, sn.log_error, sn.wright_fisher_copy, sn.conformist_probability, sn.neutral, sn.fit_slope,
       0, fill(0,num_results), fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results),
       fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), Array{Float64,2}(0,0))
   if sn.save_populations
@@ -117,24 +131,28 @@ function simple_neutral_simulation( sn::simple_neutral_type )
   pop = fill( sn.initial_value, sn.N )
   for g = 1:(int_burn_in + sn.ngens )
     i = 1
-    #println("before copy g: ",g,"  pop: ",pop)
+    println("before copy g: ",g,"  pop: ",pop)
     new_pop = mutate_pop( sn, pop )
-    #println("after mutate g: ",g,"  new_pop: ",new_pop)
-    if sn.wright_fisher_copy
-      #pop = [ new_pop[ sn.N>1?rand(1:sn.N):1 ] for j = 1:sn.N ]
-      if sn.N > 1
-        r = rand(1:sn.N,sn.N)
+    println("after mutate g: ",g,"  new_pop: ",new_pop)
+    if sn.neutral || sn.fit_slope == 0.0   # neutral, no selection
+      if sn.wright_fisher_copy && (sn.neutral || sn.fit_slope == 0.0)
+        #pop = [ new_pop[ sn.N>1?rand(1:sn.N):1 ] for j = 1:sn.N ]
+        if sn.N > 1
+          r = rand(1:sn.N,sn.N)
+        else
+          r = fill(1,sn.N)
+        end
+        #println("r: ",r)
+        pop = new_pop[r]
       else
-        r = fill(1,sn.N)
+        #pop = deepcopy(new_pop)   # not sure if deepcopy is necessary
+        pop = new_pop
       end
-      #println("r: ",r)
-      pop = new_pop[r]
-    else
-      #pop = deepcopy(new_pop)   # not sure if deepcopy is necessary
-      pop = new_pop
+    elseif !sn.neutral && sn.fit_slope > 0.0
+      pop = propsel_funct( new_pop, sn.fit_funct, sn.initial_value, sn.fit_slope )
     end
-    #println("after WF g: ",g,"  pop: ",pop)
-    if sn.conformist_probability > 0.0
+    println("after WF g: ",g,"  pop: ",pop)
+    if sn.conformist_probability > 0.0  # unclear if conformist copy should happen after wf copy or propsel
       conformist_copy!( pop, sn )
     end
     #println("after CC g: ",g,"  pop: ",pop)
@@ -203,7 +221,7 @@ function mutate_pop( sn::simple_neutral_type, pop::Vector{Float64} )
       #println("rn: ",rn)
       mult = 1.0 + sn.mutstddev*rn
     end
-    #println("mult: ",mult)
+    println("mult: ",mult)
     if sn.log_error
       pop[i] = p+log(mult)
     else
@@ -328,7 +346,9 @@ function writeheader( stream::IO, csn::cummulative_neutral_type )
     "# record_interval=$(csn.record_interval)",
     "# use_population=$(csn.use_population)",
     "# save_populations=$(csn.save_populations)",
-    "# log_error=$(csn.log_error)"
+    "# log_error=$(csn.log_error)",
+    "# fit_slope=$(csn.fit_slope)",
+    "# neutral=$(csn.neutral)"
     #"# wright_fisher_copy=$(csn.wright_fisher_copy)"
     #"# conformist_probability=$(csn.conformist_probability)"
     ]
@@ -385,12 +405,12 @@ function writerows( stream::IO, csn::cummulative_neutral_type )
   mean_squared_list = map(x->x^2, csn.attr_mean_sum)
   mean_sq_list = csn.attr_mean_sum .* csn.attr_mean_sum
   @assert reduce(&, mean_squared_list .== mean_sq_list )
-  mean_stdvs = sqrt(csn.attr_mean_sum_sq/(csn.count_trials-1) - mean_squared_list/csn.count_trials/(csn.count_trials-1))
+  mean_stdvs = sqrt.(csn.attr_mean_sum_sq/(csn.count_trials-1) - mean_squared_list/csn.count_trials/(csn.count_trials-1))
   medians = csn.attr_median_sum/csn.count_trials
   median_squared_list = map(x->x^2, csn.attr_median_sum)
   median_sq_list = csn.attr_median_sum .* csn.attr_median_sum
   @assert reduce(&, median_squared_list .== median_sq_list )
-  median_stdvs = sqrt(csn.attr_median_sum_sq/(csn.count_trials-1) - median_squared_list/csn.count_trials/(csn.count_trials-1))
+  median_stdvs = sqrt.(csn.attr_median_sum_sq/(csn.count_trials-1) - median_squared_list/csn.count_trials/(csn.count_trials-1))
   coef_vars = csn.attr_coef_var_sum/csn.count_trials
   if csn.N > 1
     coef_var_squared_list = map(x->x^2, csn.attr_coef_var_sum)
@@ -398,7 +418,7 @@ function writerows( stream::IO, csn::cummulative_neutral_type )
     coef_var_sq_list = csn.attr_coef_var_sum .* csn.attr_coef_var_sum
     #println("coef_var_squ_list: ",coef_var_sq_list)
     @assert reduce(&, coef_var_squared_list .== coef_var_sq_list )
-    cv_stdevs = sqrt(csn.attr_coef_var_sum_sq/(csn.count_trials-1) - coef_var_squared_list/csn.count_trials/(csn.count_trials-1))
+    cv_stdevs = sqrt.(csn.attr_coef_var_sum_sq/(csn.count_trials-1) - coef_var_squared_list/csn.count_trials/(csn.count_trials-1))
   else
     cv_stdevs = fill(0.0,num_results)
   end

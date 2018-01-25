@@ -1,47 +1,48 @@
-#=
-Recommended command line to run:
->  julia -L ContVarEvolution.jl run_cv.jl configs/example1
-=#
+# See run.jl for command-line example runs.
 export cont_var_result, print_cont_var_result, run_trial, writeheader, writerow
 #include("types.jl")
   
 function cont_var_result( num_trials, N::Int64, num_subpops::Int64, num_attributes::Int64, ngens::Int64, burn_in::Number,
-     mutation_stddev::Float64, ideal::Float64, fit_slope::Float64, wrap_attributes::Bool, additive_error::Bool, neutral::Bool=false )
+     mutation_stddev::Float64, ideal::Float64, fit_slope::Float64, neutral::Bool=false )
   if typeof(burn_in) == Int64
     int_burn_in = burn_in
   else
     int_burn_in = Int(round(burn_in*N+50.0))
   end
   return cont_var_result_type( num_trials, N, num_subpops, num_attributes, ngens, int_burn_in,
-      mutation_stddev, ideal, fit_slope, wrap_attributes, additive_error, neutral, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
+      mutation_stddev, ideal, fit_slope, neutral, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
 end
 
-function print_cont_var_result( sr::cont_var_result_type )
-  println("num_trials: ", sr.num_trials)
-  println("N: ", sr.N)
-  println("num_subpops: ", sr.num_subpops)
-  println("num_attributes: ", sr.num_attributes)
-  println("mutation_stddev: ", sr.mutation_stddev)
-  println("ideal: ",sr.ideal)
-  println("fit_slope: ",sr.fit_slope)
-  println("ngens: ", sr.ngens)
-  println("wrap attributes: ", sr.wrap_attributes)
-  println("additive_error: ", sr.additive_error)
-  println("burn_in: ", sr.burn_in)
-  println("neutral: ", sr.neutral )
-  println("fitness_mean: ", sr.fitness_mean)
-  println("fitness_median: ", sr.fitness_mean)
-  println("fitness_coef_var: ", sr.fitness_coef_var)
-  println("attiribute_mean: ", sr.attribute_mean)
-  println("attiribute_median: ", sr.attribute_mean)
-  println("attiribute_coef_var: ", sr.attribute_coef_var)
-  println("fit diff neg count: ",sr.neg_count)
-  println("fit diff neg neutral: ",sr.neg_neutral)
-  println("fit diff pos neutral: ",sr.pos_neutral)
-  println("fit diff pos count: ",sr.pos_count)
+# TODO This function is never called and so can be deleted
+function print_cont_var_result( sim_record::cont_var_result_type )
+  println("num_trials: ", sim_record.num_trials)
+  println("N: ", sim_record.N)
+  println("num_subpops: ", sim_record.num_subpops)
+  println("num_attributes: ", sim_record.num_attributes)
+  println("mutation_stddev: ", sim_record.mutation_stddev)
+  println("ideal: ",sim_record.ideal)
+  println("fit_slope: ",sim_record.fit_slope)
+  println("ngens: ", sim_record.ngens)
+  println("burn_in: ", sim_record.burn_in)
+  println("neutral: ", sim_record.neutral )
+  println("fitness_mean: ", sim_record.fitness_mean)
+  println("fitness_median: ", sim_record.fitness_mean)
+  println("fitness_coef_var: ", sim_record.fitness_coef_var)
+  println("attiribute_mean: ", sim_record.attribute_mean)
+  println("attiribute_median: ", sim_record.attribute_mean)
+  println("attiribute_coef_var: ", sim_record.attribute_coef_var)
+  println("fit diff neg count: ",sim_record.neg_count)
+  println("fit diff neg neutral: ",sim_record.neg_neutral)
+  println("fit diff pos neutral: ",sim_record.pos_neutral)
+  println("fit diff pos count: ",sim_record.pos_count)
 end
 
-function writeheader( stream::IO, sr::cont_var_result_type )
+@doc """ function writeheader()
+  Writes the parameters and the header line for the output CSV file.
+  The parameters that do not vary by trial are first written as comment lines where the comment character is "#".
+  Then the header line is written.  The headers of course must correspond to the values written by the writerows function.
+"""
+function writeheader( stream::IO, sim_record::cont_var_result_type )
   global mutation_stddev_list
   global N_mut_list
   #println("isdefined mutation_stddev_list: ",isdefined(:mutation_stddev_list))
@@ -53,16 +54,14 @@ function writeheader( stream::IO, sr::cont_var_result_type )
   end
   param_strings = [
     "# $(string(Dates.today()))",
-    "# num_trials=$(sr.num_trials)",
+    "# num_trials=$(sim_record.num_trials)",
     N_mut_string,
-    #"# N=$(sr.N)",
-    #"# num_attributes=$(sr.num_attributes)",
-    "# ngens=$(sr.ngens)",
-    "# wrap_attributes =$(sr.wrap_attributes)",
-    "# additive_error=$(sr.additive_error)",
-    "# neutral=$(sr.neutral)",
-    "# ideal=$(sr.ideal)",
-    "# fit_slope=$(sr.fit_slope)"]
+    #"# N=$(sim_record.N)",
+    #"# num_attributes=$(sim_record.num_attributes)",
+    "# ngens=$(sim_record.ngens)",
+    "# neutral=$(sim_record.neutral)",
+    "# ideal=$(sim_record.ideal)",
+    "# fit_slope=$(sim_record.fit_slope)"]
 
   write(stream,join(param_strings,"\n"),"\n")
   heads = [
@@ -75,7 +74,7 @@ function writeheader( stream::IO, sr::cont_var_result_type )
     "attribute_median",
     "attribute_coef_var"
   ]
-  fitness_heads = [
+  fitness_heads = [   # not written if the simulation is neutral
     "fitness_mean",
     "fitness_median",
     "fitness_coef_var",
@@ -84,40 +83,44 @@ function writeheader( stream::IO, sr::cont_var_result_type )
     "fit_diff_pos_neutral",
     "fit_diff_pos_fract"
   ]
-  if !sr.neutral
+  if !sim_record.neutral
     heads = vcat(heads,fitness_heads)
   end
   write(stream,join(heads,","),"\n")
 end
-    
-function writerow( stream::IO, trial::Int64, sr::cont_var_result_type )
-  sum_fitdiff = Float64(sum( (sr.neg_count, sr.neg_neutral, sr.pos_neutral, sr.pos_count) ))
+
+@doc """ function writerow()
+  Writes one row of the CSV file, where a row corresponds to 1 trial of the simulation.
+"""    
+function writerow( stream::IO, trial::Int64, sim_record::cont_var_result_type )
+  sum_fitdiff = Float64(sum( (sim_record.neg_count, sim_record.neg_neutral, sim_record.pos_neutral, sim_record.pos_count) ))
   values = Any[
-          sr.N,
-          sr.N*sr.mutation_stddev,
-          sr.mutation_stddev,
-          sr.num_attributes,
-          sr.int_burn_in,
-          sr.attribute_mean,
-          sr.attribute_median,
-          sr.attribute_coef_var
+          sim_record.N,
+          sim_record.N*sim_record.mutation_stddev,
+          sim_record.mutation_stddev,
+          sim_record.num_attributes,
+          sim_record.int_burn_in,
+          sim_record.attribute_mean,
+          sim_record.attribute_median,
+          sim_record.attribute_coef_var
   ]
   fitness_values = [
-          sr.fitness_mean,
-          sr.fitness_median,
-          sr.fitness_coef_var,
-          sr.neg_count/sum_fitdiff,
-          sr.neg_neutral/sum_fitdiff,
-          sr.pos_neutral/sum_fitdiff,
-          sr.pos_count/sum_fitdiff
+          sim_record.fitness_mean,
+          sim_record.fitness_median,
+          sim_record.fitness_coef_var,
+          sim_record.neg_count/sum_fitdiff,
+          sim_record.neg_neutral/sum_fitdiff,
+          sim_record.pos_neutral/sum_fitdiff,
+          sim_record.pos_count/sum_fitdiff
   ]
-  if !sr.neutral
+  if !sim_record.neutral
     values = vcat(values,fitness_values)
   end
   write(stream,join(values,","),"\n")
 end
 
-
+#= for testing purposes  TODO:  delete
 if isdefined(:simtype)
   run_trials()
 end
+=#

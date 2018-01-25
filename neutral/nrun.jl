@@ -9,7 +9,7 @@ function run_trials( simname::AbstractString )
   global log_error    # use log normal error:  work in log space
   global wright_fisher_copy,  wright_fisher_copy_list
   global conformist_probability, conformist_probability_list
-  #println("log_error: ",log_error)
+  global fit_slope
   if !(simtype == 3 || simtype == 4)
     error("simtype must be 3 or 4 for simple neutral evolution!")
   end
@@ -44,8 +44,11 @@ function run_trials( simname::AbstractString )
   if !isdefined(:conformist_probability_list)
     conformist_probability_list = [conformist_probability]
   end
+  if !isdefined(:fit_slope)
+    fit_slope = 0.0
+  end
   sn = simple_neutral_init( simtype, N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population,
-      save_populations, log_error, wright_fisher_copy, conformist_probability )
+      save_populations, log_error, wright_fisher_copy, conformist_probability, neutral, fit_slope )
   print_simple_neutral_params( sn )
   csn = cummulative_neutral_init( sn )
   if !csn.save_populations
@@ -71,7 +74,9 @@ function run_trials( simname::AbstractString )
         for t = 1:num_trials
           Base.push!(sn_list_run,deepcopy(sn))
         end
-        sn_list_result = pmap( run_sim, sn_list_run )
+        # TODO:  change map to pmap
+        #sn_list_result = pmap( run_sim, sn_list_run )
+        sn_list_result = map( run_sim, sn_list_run )
         for rsn in sn_list_result
           accumulate_results( rsn, csn )
         end

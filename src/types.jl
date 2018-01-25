@@ -19,8 +19,6 @@ type cont_var_result_type
   mutation_stddev::Float64  # standard deviation of mutation distribution of mutation perturbations
   ideal::Float64             #ideal value 
   fit_slope::Float64         # fitness = 1.0/(fit_slope*distance(attributes,ideal)+1.0)
-  wrap_attributes::Bool      # Keep attributes within the unit interval by wrapping around (so that attribute space is toroidal)
-  additive_error::Bool       # If true, use additive rather than multiplicative copy error
   neutral::Bool              # If true, fitness = 1
   fitness_mean::Float64      # average of fitnesses over subpopulations and generations
   fitness_median::Float64      # average of fitnesses over subpopulations and generations
