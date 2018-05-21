@@ -1,20 +1,21 @@
 # Julia program to be called from the command line to run continous variable simulation
 # Remaining code is in the module ContVarEvolution.
-# Example run:  julia -L ContVarEvolution.jl run.jl examples/example1
-# Example run:  julia -L ContVarEvolution.jl run.jl examples/example1  1     # runs with random seed = 1
-# Example run:  julia -p :4 -L ContVarEvolution.jl run.jl examples/example1
-using ContVarEvolution
+# Example run:  julia run.jl examples/example1
+# Example run:  julia run.jl examples/example1  1     # runs with random seed = 1
+# Example run:  julia -p 4 run.jl examples/example1
+@everywhere include("ContVarEvolution.jl")
 
 @doc """ function run_trials()
   Runs multiple trials of the simulation using the parameter file "\$(simname).jl" where  simname is the first command line argument.
   Trials can be run in parallel using the Julia parallel map (pmap) facility.
 """
 function run_trials( simname::AbstractString ) 
+
   global mutation_stddev_list
   global N_mut_list
-  #circular_variation = extreme_variation = false
   stream = open("$(simname).csv","w")
   println("stream: ",stream)
+  check_parameters()
   # sim_record  is a record containing both the parameters and the results for a trial
   if isdefined(:mutation_stddev_list)  # the  sim_record  initialized here is used in the calls to writeheader() below.
     sim_record = ContVarEvolution.cont_var_result(num_trials,N_list[1],num_subpops,num_attributes_list[1], ngens, burn_in,
@@ -22,6 +23,8 @@ function run_trials( simname::AbstractString )
   elseif isdefined(:N_mut_list)
     sim_record = ContVarEvolution.cont_var_result(num_trials,N_list[1],num_subpops,num_attributes_list[1], ngens, burn_in,
        N_mut_list[1]/N_list[1]/100, ideal, fit_slope, neutral )
+  else
+    error("Either mutation_stddev_list or N_mut_list must be defined in the configuration file.")
   end
   # collect these parameter records into the list   sim_record_list_run 
   sim_record_list_run = ContVarEvolution.cont_var_result_type[]
@@ -46,18 +49,19 @@ function run_trials( simname::AbstractString )
             mutation_stddev = N_mut/N
             sim_record = ContVarEvolution.cont_var_result(num_trials,N,num_subpops,num_attributes, ngens, burn_in,
                  mutation_stddev, ideal, fit_slope, neutral )
-            int_burn_in = Int(round(burn_in*sim_record.N+50.0)) 
             Base.push!(sim_record_list_run, sim_record )
           end
         end
       end
     end
+  else
+    error("Either mutation_stddev_list or N_mut_list must be defined in the configuration file.")
   end
   println("===================================")
   # Run the simulation function "cont_var_simulation" on each parameter record in parallel
   # For each trial, "cont_var_simulation" adds the trial results to the parameter/result record
-  # TODO:  change back to pmap
-  sim_record_list_result = map(cont_var_simulation, sim_record_list_run )
+  # You may want to change "pmap" to "map" for debugging purposes if you are getting complicated error messages.
+  sim_record_list_result = pmap(cont_var_simulation, sim_record_list_run )
   trial = 1
   writeheader( STDOUT, sim_record )
   writeheader( stream, sim_record )
@@ -67,6 +71,20 @@ function run_trials( simname::AbstractString )
     trial += 1
   end
 end    
+
+@doc """ function check_parameters()
+  Check that all necessary parameters have been read from the parameter file.
+  With julia v. 6.2 on CentOS, missing parameters can cause a segmentation fault.
+"""
+function check_parameters()
+  global num_trials, N_list, num_subpops, num_attributes_list, ngens, burn_in, mutation_stddev_list, N_mut_list, ideal, fit_slope, neutral
+  param_list = [:num_trials, :N_list, :num_subpops, :num_attributes_list, :ngens, :burn_in, :ideal, :fit_slope, :neutral]
+  for p in param_list
+    if !isdefined(p)
+      error("The parameter $(String(p)) is not defined in the parameter file: $(simname).jl.")
+    end
+  end
+end
 
 if length(ARGS) == 0
   simname = "examples/example2"
@@ -81,5 +99,5 @@ end
 include("$(simname).jl")
 #println("simname: ",simname)
 println("simtype: ",simtype)
-println("num_trials: ",num_trials)
+check_parameters()
 run_trials( simname )

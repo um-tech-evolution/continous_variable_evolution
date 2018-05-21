@@ -1,6 +1,8 @@
 # top-level functions to run neutral.jl without parallel map
-# Example run:  julia -L neutral.jl nrun.jl examples/sn_example1
-# Example run:  julia -L neutral.jl nrun.jl examples/sn_example1 <seed>
+# Example run:  julia run.jl examples/sn_example1
+# Example run:  julia run.jl examples/sn_example1 <seed>    # run with specified random number seed
+# Example run:  julia -p 4 run.jl examples/sn_example1 <seed>  # run with 4 processes (cores)
+@everywhere include("NeutralEvolution.jl")
 
 function run_trials( simname::AbstractString )
   global num_trials
@@ -10,8 +12,9 @@ function run_trials( simname::AbstractString )
   global wright_fisher_copy,  wright_fisher_copy_list
   global conformist_probability, conformist_probability_list
   global fit_slope
+  global N, mutstddev, initial_value
   if !(simtype == 3 || simtype == 4)
-    error("simtype must be 3 or 4 for simple neutral evolution!")
+    println("Warning! running neutral.jl on simtype == 2 file.")
   end
   # set defaults for parameters that may not be included in the config file.
   if !isdefined(:use_population)
@@ -47,9 +50,20 @@ function run_trials( simname::AbstractString )
   if !isdefined(:fit_slope)
     fit_slope = 0.0
   end
+  if !isdefined(:initial_value)
+    initial_value = ideal
+  end
+  if !isdefined(:N) && isdefined(:N_list)
+    N = N_list[1]
+    println("Warning! Using N = N_list[1] ")
+  end
+  if !isdefined(:mutstddev) && isdefined(:mutation_stddev_list)
+    mutstddev = mutation_stddev_list[1]
+    println("Warning! Using mutstddev = mutation_stddev_list[1]")
+  end
   sn = simple_neutral_init( simtype, N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population,
       save_populations, log_error, wright_fisher_copy, conformist_probability, neutral, fit_slope )
-  print_simple_neutral_params( sn )
+  #print_simple_neutral_params( sn )
   csn = cummulative_neutral_init( sn )
   if !csn.save_populations
     writeheader( STDOUT, csn )
@@ -67,7 +81,6 @@ function run_trials( simname::AbstractString )
       csn = cummulative_neutral_init( sn )
       sn.wright_fisher_copy = wf_copy
       sn.conformist_probability = cf_prob
-      #csn.wright_fisher_copy = wf_copy
       if nworkers() > 1
         sn_list_run = simple_neutral_type[]
         run_sim = (sn.N > 1 || sn.use_population) ? simple_neutral_simulation : ces
@@ -75,8 +88,8 @@ function run_trials( simname::AbstractString )
           Base.push!(sn_list_run,deepcopy(sn))
         end
         # TODO:  change map to pmap
-        #sn_list_result = pmap( run_sim, sn_list_run )
-        sn_list_result = map( run_sim, sn_list_run )
+        sn_list_result = pmap( run_sim, sn_list_run )
+        #sn_list_result = map( run_sim, sn_list_run )
         for rsn in sn_list_result
           accumulate_results( rsn, csn )
         end
@@ -90,10 +103,7 @@ function run_trials( simname::AbstractString )
           else
             error(" sn.N must be positive ")
           end
-          #println("trial: ",t,"  avg mean: ",sn.average_attr_mean,"  avg coef var: ",sn.average_attr_coef_var )
           accumulate_results( sn, csn )
-          #println("mean history: ",sn.attr_mean_history)
-          #println("coef_var history: ",sn.attr_coef_var_history)
         end
       end
       if !csn.save_populations

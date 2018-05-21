@@ -13,30 +13,6 @@ function cont_var_result( num_trials, N::Int64, num_subpops::Int64, num_attribut
       mutation_stddev, ideal, fit_slope, neutral, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
 end
 
-# TODO This function is never called and so can be deleted
-function print_cont_var_result( sim_record::cont_var_result_type )
-  println("num_trials: ", sim_record.num_trials)
-  println("N: ", sim_record.N)
-  println("num_subpops: ", sim_record.num_subpops)
-  println("num_attributes: ", sim_record.num_attributes)
-  println("mutation_stddev: ", sim_record.mutation_stddev)
-  println("ideal: ",sim_record.ideal)
-  println("fit_slope: ",sim_record.fit_slope)
-  println("ngens: ", sim_record.ngens)
-  println("burn_in: ", sim_record.burn_in)
-  println("neutral: ", sim_record.neutral )
-  println("fitness_mean: ", sim_record.fitness_mean)
-  println("fitness_median: ", sim_record.fitness_mean)
-  println("fitness_coef_var: ", sim_record.fitness_coef_var)
-  println("attiribute_mean: ", sim_record.attribute_mean)
-  println("attiribute_median: ", sim_record.attribute_mean)
-  println("attiribute_coef_var: ", sim_record.attribute_coef_var)
-  println("fit diff neg count: ",sim_record.neg_count)
-  println("fit diff neg neutral: ",sim_record.neg_neutral)
-  println("fit diff pos neutral: ",sim_record.pos_neutral)
-  println("fit diff pos count: ",sim_record.pos_count)
-end
-
 @doc """ function writeheader()
   Writes the parameters and the header line for the output CSV file.
   The parameters that do not vary by trial are first written as comment lines where the comment character is "#".
@@ -118,9 +94,3 @@ function writerow( stream::IO, trial::Int64, sim_record::cont_var_result_type )
   end
   write(stream,join(values,","),"\n")
 end
-
-#= for testing purposes  TODO:  delete
-if isdefined(:simtype)
-  run_trials()
-end
-=#

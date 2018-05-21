@@ -131,9 +131,9 @@ function simple_neutral_simulation( sn::simple_neutral_type )
   pop = fill( sn.initial_value, sn.N )
   for g = 1:(int_burn_in + sn.ngens )
     i = 1
-    println("before copy g: ",g,"  pop: ",pop)
+    #println("before copy g: ",g,"  pop: ",pop)
     new_pop = mutate_pop( sn, pop )
-    println("after mutate g: ",g,"  new_pop: ",new_pop)
+    #println("after mutate g: ",g,"  new_pop: ",new_pop)
     if sn.neutral || sn.fit_slope == 0.0   # neutral, no selection
       if sn.wright_fisher_copy && (sn.neutral || sn.fit_slope == 0.0)
         #pop = [ new_pop[ sn.N>1?rand(1:sn.N):1 ] for j = 1:sn.N ]
@@ -151,7 +151,7 @@ function simple_neutral_simulation( sn::simple_neutral_type )
     elseif !sn.neutral && sn.fit_slope > 0.0
       pop = propsel_funct( new_pop, sn.fit_funct, sn.initial_value, sn.fit_slope )
     end
-    println("after WF g: ",g,"  pop: ",pop)
+    #println("after WF g: ",g,"  pop: ",pop)
     if sn.conformist_probability > 0.0  # unclear if conformist copy should happen after wf copy or propsel
       conformist_copy!( pop, sn )
     end
@@ -221,7 +221,7 @@ function mutate_pop( sn::simple_neutral_type, pop::Vector{Float64} )
       #println("rn: ",rn)
       mult = 1.0 + sn.mutstddev*rn
     end
-    println("mult: ",mult)
+    #println("mult: ",mult)
     if sn.log_error
       pop[i] = p+log(mult)
     else

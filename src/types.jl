@@ -1,5 +1,6 @@
+#  Defines the types "Population" and "PopList".
+#  Defines the composite types "cont_var_result_type" and "variant_type"
 export variant_type, fitness_location_type
-#using Distributions
 const Population = Array{Int64,1}
 const PopList = Array{Population,1}
 
@@ -13,7 +14,6 @@ type cont_var_result_type
   N::Int64   # meta-population size
   num_subpops::Int64   # number of subpopulations
   num_attributes::Int64  # number of attributes of a variant
-  #mu::Float64     # innovation rate
   ngens::Int64  # number of generations after burn-in
   int_burn_in::Int64
   mutation_stddev::Float64  # standard deviation of mutation distribution of mutation perturbations
