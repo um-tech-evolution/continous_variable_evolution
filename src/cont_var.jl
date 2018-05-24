@@ -1,11 +1,15 @@
 # ContVar structure simulation with horizontal transfer
 export cont_var_simulation, fitness
+try    # "using Printf" fails in julia v6, but avoids a deprecation error in julia v7
+  using Printf
+catch
+end
 #using DataStructures
 import DataStructures.counter
 import DataStructures.Accumulator
 #=
 Recommended command line to run:
->  julia run_cv.jl configs/example1
+>  julia run.jl configs/example1
 =#
 
 @doc """ function cont_var_simulation()
@@ -96,7 +100,7 @@ function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
 end
 
 function fitness( attributes::Vector{Float64}, ideal::Vector{Float64}, neutral::Bool )
-  const fit_slope = 1.0
+  fit_slope = 1.0
   if length(attributes) != length(ideal)
     error("length(attributes) must equal length(ideal) in fitness")
   end

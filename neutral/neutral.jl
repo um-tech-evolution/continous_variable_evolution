@@ -10,7 +10,13 @@ export simple_neutral_type, simple_neutral_init, cummulative_neutral_type, cummu
       print_simple_neutral_params, simple_neutral_simulation, ces, accumulate_results, writeheader,
       writerows, writeheader_populations, writerows_populations, coef_var, inverse_fitness
 
-type simple_neutral_type
+try
+  using Dates
+  using Printf
+catch
+end
+
+mutable struct simple_neutral_type
   simtype::Int64
   N::Int64   # popsize
   mutstddev::Float64
@@ -44,13 +50,14 @@ function simple_neutral_init( simtype::Int64,N::Int64, mutstddev::Float64, ngens
     log_error::Bool=false, wright_fisher_copy::Bool=true, conformist_probability::Float64=0.0, neutral::Bool=true,
     fit_slope::Float64=1.0, fit_funct::Function=inverse_fitness)
   num_results = Int(ceil(ngens/record_interval))
+  saved_pop_empty = try  Array{Float64,1}(undef,0) catch; Array{Float64,1}(0) end
   sn = simple_neutral_type( simtype, N, mutstddev, ngens, initial_value, num_trials, record_interval, use_population, save_population,
     log_error, wright_fisher_copy, conformist_probability, neutral, fit_slope, inverse_fitness,
     0.0, 0.0, 0.0,
     fill(0.0,num_results),
     fill(0.0,num_results), 
     fill(0.0,num_results),
-    Vector{Float64}(0))
+    saved_pop_empty)
   #println("log_error: ",sn.log_error)
   sn
 end
@@ -75,7 +82,7 @@ function print_simple_neutral_params( sn::simple_neutral_type )
   #println("log_error: ",sn.log_error,"  wright_fisher_copy: ",sn.wright_fisher_copy)
 end
 
-type cummulative_neutral_type
+mutable struct cummulative_neutral_type
   simtype::Int64
   N::Int64  # popsize
   mutstddev::Float64
@@ -103,10 +110,11 @@ end
 
 function cummulative_neutral_init( sn::simple_neutral_type )
   num_results = Int(ceil(sn.ngens/sn.record_interval))
+  saved_pops_empty = try  Array{Float64,2}(undef,0,0) catch; Array{Float64,2}(0,0) end
   csn = cummulative_neutral_type( sn.simtype, sn.N, sn.mutstddev, sn.ngens, sn.initial_value, sn.num_trials, sn.record_interval,
       sn.use_population, sn.save_populations, sn.log_error, sn.wright_fisher_copy, sn.conformist_probability, sn.neutral, sn.fit_slope,
       0, fill(0,num_results), fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results),
-      fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), Array{Float64,2}(0,0))
+      fill(0.0,num_results), fill(0.0,num_results), fill(0.0,num_results), saved_pops_empty)
   if sn.save_populations
     csn.saved_populations = fill(0.0, (sn.N, sn.num_trials) )
   end
@@ -136,7 +144,7 @@ function simple_neutral_simulation( sn::simple_neutral_type )
     #println("after mutate g: ",g,"  new_pop: ",new_pop)
     if sn.neutral || sn.fit_slope == 0.0   # neutral, no selection
       if sn.wright_fisher_copy && (sn.neutral || sn.fit_slope == 0.0)
-        #pop = [ new_pop[ sn.N>1?rand(1:sn.N):1 ] for j = 1:sn.N ]
+        #pop = [ new_pop[ sn.N>1 ? rand(1:sn.N) : 1 ] for j = 1:sn.N ]
         if sn.N > 1
           r = rand(1:sn.N,sn.N)
         else
@@ -337,7 +345,7 @@ end
 function writeheader( stream::IO, csn::cummulative_neutral_type )
   param_strings = [
     "# $(string(Dates.today()))",
-    "# $((csn.simtype==3)?"neutral continuous var model simtype==3":"invalid simtype")",
+    "# $((csn.simtype==3) ? "neutral continuous var model simtype==3" : "invalid simtype")",
     #"# N=$(csn.N)",
     "# mutation stddev=$(csn.mutstddev)",
     "# ngens=$(csn.ngens)",
@@ -371,7 +379,7 @@ end
 function writeheader_populations( stream::IO, csn::cummulative_neutral_type )
   param_strings = [
     "# $(string(Dates.today()))",
-    "# $((csn.simtype==3)?"neutral continuous var model simtype==3":"invalid simtype")",
+    "# $((csn.simtype==3) ? "neutral continuous var model simtype==3" : "invalid simtype")",
     "# N=$(csn.N)",
     "# mutation stddev=$(csn.mutstddev)",
     "# ngens=$(csn.ngens)",
@@ -391,7 +399,7 @@ end
 
 function writerows_populations( stream::IO, csn::cummulative_neutral_type )
   for j = 1:csn.N
-    @printf(stream,"%6s,",csn.wright_fisher_copy?"true":"false")
+    @printf(stream,"%6s,",csn.wright_fisher_copy ? "true" : "false")
     for i = 1:(csn.num_trials-1)
       @printf(stream,"%.4f,",csn.saved_populations[j,i])
     end

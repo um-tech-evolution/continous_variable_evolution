@@ -41,9 +41,9 @@ function test_propsel_funct()
   n = 10
   # create an attribute array [1.0, 2.0, . . . ,10.0]
   attr = [ convert(Float64,i) for i=1:n]
-  # x->(x==5.0?:1.0:0.0)  is an anonymous function that gives only 5.0 fitness 2.0
+  # x->(x==5.0 ? :2.0 : 0.0)  is an anonymous function that gives only 5.0 fitness 2.0
   #   and all other numbers fitness 0.0
-  new_attr = propsel_funct( attr, x->(x==5.0?:2.0:0.0) )
+  new_attr = propsel_funct( attr, x->(x==5.0 ? :2.0 : 0.0) )
   @assert( new_attr == fill(5.0,n) )  # new_attr should be [5.0, 5.0, . . . ,5.0]
 end
   

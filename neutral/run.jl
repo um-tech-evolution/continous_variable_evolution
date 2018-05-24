@@ -1,7 +1,13 @@
-# top-level functions to run neutral.jl without parallel map
-# Example run:  julia run.jl examples/sn_example1
-# Example run:  julia run.jl examples/sn_example1 <seed>    # run with specified random number seed
-# Example run:  julia -p 4 run.jl examples/sn_example1 <seed>  # run with 4 processes (cores)
+# top-level functions to run neutral.jl 
+# Example run:  julia run.jl examples/example1
+# Example run:  julia run.jl examples/example1 <seed>    # run with specified random number seed
+# Example run:  julia -p 4 run.jl examples/example1 <seed>  # run with 4 processes (cores)
+try
+  using Distributed
+  using Random
+  using Dates
+catch
+end
 @everywhere include("NeutralEvolution.jl")
 
 function run_trials( simname::AbstractString )
@@ -87,9 +93,8 @@ function run_trials( simname::AbstractString )
         for t = 1:num_trials
           Base.push!(sn_list_run,deepcopy(sn))
         end
-        # TODO:  change map to pmap
         sn_list_result = pmap( run_sim, sn_list_run )
-        #sn_list_result = map( run_sim, sn_list_run )
+        #sn_list_result = map( run_sim, sn_list_run )  # debuging is simpler using map() instead of pmap()
         for rsn in sn_list_result
           accumulate_results( rsn, csn )
         end

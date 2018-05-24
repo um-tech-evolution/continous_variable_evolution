@@ -1,15 +1,74 @@
 # See run.jl for command-line example runs.
-export cont_var_result, print_cont_var_result, run_trial, writeheader, writerow
-#include("types.jl")
-  
-function cont_var_result( num_trials, N::Int64, num_subpops::Int64, num_attributes::Int64, ngens::Int64, burn_in::Number,
-     mutation_stddev::Float64, ideal::Float64, fit_slope::Float64, neutral::Bool=false )
+export run_trials, cont_var_result, print_cont_var_result, run_trial, writeheader, writerow, my_isdefined, check_parameters
+
+@doc """ function run_trials(sim_record::ContVarEvolution.cont_var_result_type )
+  Runs multiple trials of the simulation using the parameter file "\$(simname).jl" where  simname is the first command line argument.
+  Trials can be run in parallel using the Julia parallel map (pmap) facility.
+"""
+function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_var_result_type ) 
+  stream = open("$(simname).csv","w")
+  println("stream: ",stream)
+  # collect these parameter records into the list   sim_record_list_run 
+  sim_record_list_run = ContVarEvolution.cont_var_result_type[]
+  trial=1
+  #if my_isdefined(:mutation_stddev_list)
+  if length(sim_record.mutation_stddev_list) > 0
+    for N in sim_record.N_list
+      for num_attributes in sim_record.num_attributes_list
+        for mutation_stddev in sim_record.mutation_stddev_list
+          for trial = 1:sim_record.num_trials
+            sim_record_run = deepcopy( sim_record )
+            sim_record_run.N = N   
+            sim_record_run.num_attributes = num_attributes   
+            sim_record_run.mutation_stddev = mutation_stddev   
+            Base.push!(sim_record_list_run, sim_record_run )
+          end
+        end
+      end
+    end
+  #elseif my_isdefined(:N_mut_list)
+  elseif length(sim_record.N_mut_list) > 0 
+    for N in sim_record.N_list
+      for num_attributes in sim_record.num_attributes_list
+        for N_mut in sim_record.N_mut_list
+          for trial = 1:sim_record.num_trials
+            sim_record_run = deepcopy( sim_record )
+            sim_record_run.N = N   
+            sim_record_run.num_attributes = num_attributes   
+            sim_record_run.mutation_stddev = N_mut/N
+            #println("N:",sim_record_run.N,"  num_attr:",sim_record_run.num_attributes,"  mutation_stddev: ",sim_record_run.mutation_stddev)
+            Base.push!(sim_record_list_run, sim_record_run )
+          end
+        end
+      end
+    end
+  else
+    error("Either mutation_stddev_list or N_mut_list must be defined in the configuration file.")
+  end
+  println("===================================")
+  # Run the simulation function "cont_var_simulation" on each parameter record in parallel
+  # For each trial, "cont_var_simulation" adds the trial results to the parameter/result record
+  # You may want to change "pmap" to "map" for debugging purposes if you are getting complicated error messages.
+  sim_record_list_result = pmap(cont_var_simulation, sim_record_list_run )
+  trial = 1
+  writeheader( STDOUT, sim_record )   # change STDOUT to stdout for julia v7 (but then will fail in julia v6)
+  writeheader( stream, sim_record )  
+  for sim_record_result in sim_record_list_result    # write 1 record per trial
+    writerow(STDOUT,trial,sim_record_result)  # change STDOUT to stdout for julia v7
+    writerow(stream,trial,sim_record_result)
+    trial += 1
+  end
+end    
+
+function cont_var_result( N_list::Vector{Int64}, num_attributes_list::Vector{Int64}, mutation_stddev_list::Vector{Float64}, N_mut_list::Vector{Float64},
+        num_trials, N::Int64, num_subpops::Int64, num_attributes::Int64, ngens::Int64, burn_in::Number, 
+        mutation_stddev::Float64, ideal::Float64, fit_slope::Float64, neutral::Bool=false )
   if typeof(burn_in) == Int64
     int_burn_in = burn_in
   else
     int_burn_in = Int(round(burn_in*N+50.0))
   end
-  return cont_var_result_type( num_trials, N, num_subpops, num_attributes, ngens, int_burn_in,
+  return cont_var_result_type( N_list, num_attributes_list, mutation_stddev_list, N_mut_list, num_trials, N, num_subpops, num_attributes, ngens, int_burn_in, 
       mutation_stddev, ideal, fit_slope, neutral, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
 end
 
@@ -19,20 +78,13 @@ end
   Then the header line is written.  The headers of course must correspond to the values written by the writerows function.
 """
 function writeheader( stream::IO, sim_record::cont_var_result_type )
-  global mutation_stddev_list
-  global N_mut_list
-  #println("isdefined mutation_stddev_list: ",isdefined(:mutation_stddev_list))
-  #println("isdefined N_mut_list: ",isdefined(:N_mut_list))
-  if isdefined(:N_mut_list)
-    N_mut_string = "# using N_mut_list"
-  elseif isdefined(:mutation_stddev_list)
-    N_mut_string = "# using mutation_stddev_list"
-  end
   param_strings = [
     "# $(string(Dates.today()))",
+    "# N_list=$(sim_record.N_list)",
+    "# num_attributes_list=$(sim_record.num_attributes_list)",
+    "# mutation_stddev_list=$(sim_record.mutation_stddev_list)",
+    "# N_mut_list=$(sim_record.N_mut_list)",
     "# num_trials=$(sim_record.num_trials)",
-    N_mut_string,
-    #"# N=$(sim_record.N)",
     #"# num_attributes=$(sim_record.num_attributes)",
     "# ngens=$(sim_record.ngens)",
     "# neutral=$(sim_record.neutral)",

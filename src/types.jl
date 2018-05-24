@@ -3,13 +3,24 @@
 export variant_type, fitness_location_type
 const Population = Array{Int64,1}
 const PopList = Array{Population,1}
+try
+  using Distributed
+  using Random
+  using Dates
+catch
+end
 
-type variant_type
+
+mutable struct variant_type
   fitness::Float64    # The fitness of this variant
   attributes::Vector{Float64}   # attributes of the variant
 end
 
-type cont_var_result_type
+mutable struct cont_var_result_type
+  N_list::Vector{Int64}
+  num_attributes_list::Vector{Int64}
+  mutation_stddev_list::Vector{Float64}  # list of mutation_stddev values
+  N_mut_list::Vector{Float64}  # list of mutation_stddev values
   num_trials::Int64  # Number of times to repeat simulation for each setting of the parameters
   N::Int64   # meta-population size
   num_subpops::Int64   # number of subpopulations
