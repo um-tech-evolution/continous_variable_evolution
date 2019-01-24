@@ -1,0 +1,19 @@
+Notes on an approximate implementation of the Henrich 2004 model started on approximately Jan. 15, 2019
+
+Plots in current nearly neutral paper:
+Figure 8:  cont_var: attribute coef var as a function of N for various mutation_stddev  data/9_13_17
+Figure 9:  inf_alleles:  neutral heterozygosity as a function of N for various mu  data/12_11_17
+Figure 10: cont_var:  attribute coef var as a function of N for various N_mut  data/5_13_18
+Figure 11: cont_var:  fitness differences as a function of N for NMut=1   data/1_17_18
+Figure 12: cont_var:  Non-neutral fitness mean as a function of N for various values of Nmut
+
+Note inconsistencies for N_mut (Fig 10), NMut (Fig 11), Nmut (Fig 12), NMut (paper).
+
+We want to reproduce the results of Figures 8, 10, 11, 12.
+
+We need to report attr_coef_var, fitness_mean, and fit_diffs for various N, and various NMut or mutation_stddev
+
+We should have the option to renormalize fitnes on every generation.
+
+
+

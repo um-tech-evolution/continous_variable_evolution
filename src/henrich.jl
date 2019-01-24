@@ -13,15 +13,15 @@ Recommended command line to run:
 =#
 
 @doc """ function cont_var_simulation()
-  Wright-Fisher model simulation (as opposed to Moran model)
+  Agent-based Henrich 2004 model
   Parameters:
     N     MetaPopulation size
-    m     number of subpopulations   # for now, subpopulation size = N/m
+    m     number of subpopulations   # for now, subpopulation size = N/m;  m=1 for Henrich model
     ngens number of generations after burn in
-    num_attributes   number of quantitative attributes of a variant
+    num_attributes   number of quantitative attributes of a variant;  num_attributes=1 for Henrich model
     variant_table Keeps track fitnesses and variant parent and innovation ancestor
 """
-function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
+function henrich_simulation( simrecord::ContVarEvolution.cont_var_result_type )
   fit_diff_counter = counter(Int64)
   variant_table = Dict{Int64,variant_type}()
   #int_burn_in = Int(round(simrecord.burn_in*simrecord.N+50.0))  # reduce for testing
@@ -55,14 +55,20 @@ function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
       for i = 1:n
         subpops[j][i] = mutate_attributes( previous_subpops[j][i], id, variant_table, simrecord, after_burn_in, fit_diff_counter )
       end
+      #println("B fits: ",[variant_table[subpops[j][i]].attributes[1] for i = 1:n ])
       if simrecord.neutral
         r = rand(1:n,n)
         subpops[j] = subpops[j][ r ]
       else
-        subpops[j] = propsel( subpops[j], n, variant_table )
+        subpops[j] = power_sel( subpops[j], n, simrecord.fit_power, variant_table )
       end
+      if simrecord.renormalize    # rescale fitness so that the maximum is 1.0
+        renormalize( subpops[j], n, variant_table )
+      end
+      #println("A fits: ",[variant_table[subpops[j][i]].attributes[1] for i = 1:n ])
     end
     previous_subpops = deepcopy(subpops)
+    #println("g: ",g,"  fitness: ", [ mean( [variant_table[v].fitness for v in s]) for s in subpops][1] )
     if after_burn_in
       cumm_fitness_means += [ mean( [variant_table[v].fitness for v in s]) for s in subpops]
       cumm_fitness_medians += [ median( [variant_table[v].fitness for v in s]) for s in subpops]
@@ -99,30 +105,14 @@ function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
   return simrecord
 end
 
-function fitness( attributes::Vector{Float64}, ideal::Vector{Float64}, neutral::Bool )
-  fit_slope = 1.0
+function hfitness( attributes::Vector{Float64}, ideal::Vector{Float64}, neutral::Bool )
   if length(attributes) != length(ideal)
     error("length(attributes) must equal length(ideal) in fitness")
   end
   if neutral
     return 1.0
   end
-  dis = 0.0
-  for k = 1:length(attributes)
-    dis += abs( attributes[k] - ideal[k] )
-  end
-  if fit_slope == 0.0  # use the older linear method of computing fitness
-    result = 1.0-dis/length(attributes)
-    if result < 0.0
-      #println("negative fitness")
-      #println("fitness: attributes: ",attributes,"  ideal: ",ideal," fit: ",result)
-      result = 0.0
-    end
-    @assert result >= 0.0
-  else  # new method of computing fitness added on 11/14/17
-    result = 1.0/(fit_slope*dis+1.0)
-  end
-  return result
+  return maximum(attributes)
 end
 
 @doc """ function new_innovation()
@@ -131,7 +121,7 @@ end
 function new_innovation( id::Vector{Int64}, ideal::Float64, num_attributes::Int64, variant_table::Dict{Int64,variant_type}, neutral::Bool )
   i = id[1]
   variant_table[i] = variant_type( 0.0, fill( ideal, num_attributes ) )
-  variant_table[i].fitness = fitness( variant_table[i].attributes, fill( ideal, num_attributes), neutral )  
+  variant_table[i].fitness = hfitness( variant_table[i].attributes, fill( ideal, num_attributes), neutral )  
   id[1] += 1
   i
 end
@@ -145,8 +135,8 @@ function mutate_attributes( v::Int64, id::Vector{Int64}, variant_table::Dict{Int
     simrecord::ContVarEvolution.cont_var_result_type, after_burn_in::Bool, fit_diff_counter::Accumulator{Int64,Int64} )
   i = id[1]
   vt = variant_table[v]
-  new_attributes = mutate( vt.attributes, simrecord.mutation_stddev )
-  new_fit = fitness( new_attributes, fill( simrecord.ideal, simrecord.num_attributes), simrecord.neutral )
+  new_attributes = mutate( vt.attributes, simrecord.mutation_stddev, simrecord.mutation_bias )
+  new_fit = hfitness( new_attributes, fill( simrecord.ideal, simrecord.num_attributes), simrecord.neutral )
   if after_burn_in
     increment_bins( fit_diff_counter, new_fit-vt.fitness, 1.0/simrecord.N )
   end
@@ -158,20 +148,22 @@ function mutate_attributes( v::Int64, id::Vector{Int64}, variant_table::Dict{Int
 end  
 
 @doc """ function mutate()
-  Mutate the attributes array.
+  Multiplicatively mutate the attributes array.
+  mutation_bias  should be positive and less than 1.0
 """
-function mutate( attributes::Vector{Float64}, mutation_stddev::Float64 )
+function mutate( attributes::Vector{Float64}, mutation_stddev::Float64, 
+     mutation_bias::Float64  )
   new_attributes = deepcopy(attributes)
       for i = 1:length(new_attributes)
         if new_attributes[i] <= 0.0
           println("neg attribute: ",new_attributes[i])
-          new_attributes[i] = 1.0e-6
+          new_attributes[i] = 0.1
         end
-        multiplier = (1.0+mutation_stddev*randn())
-        #println("multiplier: ",multiplier)
-        while multiplier <= 1.0e-6
+        multiplier = (mutation_bias+mutation_stddev*randn())
+        #println("mutation_bias: ",mutation_bias,"  multiplier: ",multiplier)
+        while multiplier <= 0.1
           #println("neg multiplier")
-          multiplier = (1.0+mutation_stddev*randn())
+          multiplier = (mutation_bias+mutation_stddev*randn())
         end
         new_attributes[i] *= multiplier
         if new_attributes[i] < 0.0

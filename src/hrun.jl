@@ -10,8 +10,8 @@ try   # These are needed julia v7, but will fail in julia v6.  The try ... catch
   using Dates
 catch
 end
-@everywhere include("ContVarEvolution.jl")
-#include("ContVarEvolution.jl")
+@everywhere include("Henrich.jl")
+#include("Henrich.jl")
 
 @doc """function my_isdefined()
   S  should be a symbol that corresponds to a global variable.
@@ -36,17 +36,11 @@ end
 """
 function save_params() 
   # sim_record  is a record containing both the parameters and the results for a trial
-  if my_isdefined(:mutation_stddev_list)
-    sim_record = ContVarEvolution.cont_var_result( N_list, num_attributes_list, mutation_stddev_list, Float64[], num_trials,N_list[1],
-       num_subpops,num_attributes_list[1], ngens, burn_in, 
-       mutation_stddev_list[1], ideal, fit_slope, neutral )
-  elseif my_isdefined( :N_mut_list )
-    sim_record = ContVarEvolution.cont_var_result( N_list, num_attributes_list, Float64[], N_mut_list, num_trials,N_list[1],
-       num_subpops,num_attributes_list[1], ngens, burn_in, 
-       N_mut_list[1]/N_list[1], ideal, fit_slope, neutral ) 
-  else
-    error("Either mutation_stddev_list or N_mut_list must be defined in the configuration file.")
-  end
+  println("mutation_stddev_list: ",mutation_stddev_list)
+  println("N_mut_list: ",N_mut_list)
+  sim_record = ContVarEvolution.cont_var_result( N_list,mutation_stddev_list, N_mut_list,num_trials,
+       num_subpops,num_attributes, ngens, burn_in, 
+       mutation_stddev, mutation_bias, ideal, fit_power, renormalize, neutral )
   return sim_record
 end
 
@@ -56,7 +50,7 @@ end
   With julia v. 6.2 on CentOS, missing parameters can cause a segmentation fault.
 """
 function check_parameters()
-  param_list = [:num_trials, :N_list, :num_subpops, :num_attributes_list, :ngens, :burn_in, :ideal, :fit_slope, :neutral]
+  param_list = [:num_trials, :N_list, :num_subpops, :num_attributes, :ngens, :burn_in, :ideal, :fit_power, :renormalize, :neutral]
   for p in param_list
     if !my_isdefined(p)
       error("The parameter $(String(p)) is not defined in the parameter file: $(simname).jl.")
@@ -65,7 +59,7 @@ function check_parameters()
 end
 
 if length(ARGS) == 0
-  simname = "examples/example2"
+  simname = "examples/hexample1"
 else
   simname = ARGS[1]
   if length(ARGS) >= 2   # second command-line argument is random number seed
@@ -77,6 +71,9 @@ end
 include("$(simname).jl")
 #println("simname: ",simname)
 println("simtype: ",simtype)
+if simtype != 4
+  error("simtype must be 4 for Henrich model.")
+end
 check_parameters()
 sim_record = save_params()
 run_trials( simname, sim_record )

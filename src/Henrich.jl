@@ -11,10 +11,11 @@ try
 catch
 end
 =#
-include("types.jl")     
+include("htypes.jl")     
 include("propsel.jl")   # Proportional selection
-include("cont_var.jl")  # Primary code for simulation
-include("run_cont_var.jl")
+include("power_sel.jl")   # Proportional selection applied to a power of fitness
+include("henrich.jl")  # Primary code for simulation
+include("hrun_cont_var.jl")
 include("bin_data.jl")
 end
 using Main.ContVarEvolution

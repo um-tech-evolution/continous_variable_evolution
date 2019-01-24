@@ -19,7 +19,7 @@ end
 
 mutable struct cont_var_result_type
   N_list::Vector{Int64}
-  num_attributes_list::Vector{Int64}
+  #num_attributes_list::Vector{Int64}
   mutation_stddev_list::Vector{Float64}  # list of mutation_stddev values
   N_mut_list::Vector{Float64}  # list of mutation_stddev values
   num_trials::Int64  # Number of times to repeat simulation for each setting of the parameters
@@ -29,8 +29,10 @@ mutable struct cont_var_result_type
   ngens::Int64  # number of generations after burn-in
   int_burn_in::Int64
   mutation_stddev::Float64  # standard deviation of mutation distribution of mutation perturbations
+  mutation_bias::Float64  # Multiplicate bias of mutation. Must be positve.  Normally < 1.0
   ideal::Float64             #ideal value 
-  fit_slope::Float64         # fitness = 1.0/(fit_slope*distance(attributes,ideal)+1.0)
+  fit_power::Float64         # use proportional selection applied to fitness^fit_power.
+  renormalize::Bool          # multiplicatively renormalize fitesses so that max fitness is 1.0 on every generation
   neutral::Bool              # If true, fitness = 1
   fitness_mean::Float64      # average of fitnesses over subpopulations and generations
   fitness_median::Float64      # average of fitnesses over subpopulations and generations
