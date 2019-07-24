@@ -64,18 +64,18 @@ function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
     end
     previous_subpops = deepcopy(subpops)
     if after_burn_in
-      cumm_fitness_means += [ mean( [variant_table[v].fitness for v in s]) for s in subpops]
+      cumm_fitness_means += [ Statistics.mean( [variant_table[v].fitness for v in s]) for s in subpops]
       cumm_fitness_medians += [ median( [variant_table[v].fitness for v in s]) for s in subpops]
       cumm_fitness_coef_vars += [ coef_var( [variant_table[v].fitness for v in s]) for s in subpops]
       # cumm_attr_means[s][i] is the mean of attribute i for subpop s, where the mean is over elements of s
-      cumm_attr_means += [ [ mean( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops]
+      cumm_attr_means += [ [ Statistics.mean( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops]
       # cumm_attr_means[s][i] is the median of attribute i for subpop s, where the median is over elements of s
       cumm_attr_medians += [ [ median( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops]
       # cumm_attr_coef_vars[s][i] is the coefficient of variation of attribute i for subpop s, where the mean is over elements of s
       cumm_attr_coef_vars += [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops]
-      #println("fitness_mean: ", [ mean( [variant_table[v].fitness for v in s]) for s in subpops])
+      #println("fitness_mean: ", [ Statistics.mean( [variant_table[v].fitness for v in s]) for s in subpops])
       #println("attr_coef_var: ",  [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops])
-      #println("attr mean: ", [ [ mean( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops])
+      #println("attr mean: ", [ [ Statistics.mean( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops])
       count_gens += 1
     end
     clean_up_variant_table(previous_previous_variant_id,previous_variant_id,variant_table)
@@ -88,13 +88,13 @@ function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
   cumm_attr_medians /= simrecord.ngens
   cumm_attr_coef_vars /= simrecord.ngens
   # The next 3 means are over subpops
-  simrecord.fitness_mean = mean(cumm_fitness_means)
-  simrecord.fitness_median = mean(cumm_fitness_medians)
-  simrecord.fitness_coef_var = mean(cumm_fitness_coef_vars)
+  simrecord.fitness_mean = Statistics.mean(cumm_fitness_means)
+  simrecord.fitness_median = Statistics.mean(cumm_fitness_medians)
+  simrecord.fitness_coef_var = Statistics.mean(cumm_fitness_coef_vars)
   # The next 3 means are over attributes and subpops
-  simrecord.attribute_mean = mean(mean(cumm_attr_means))
-  simrecord.attribute_median = mean(mean(cumm_attr_medians))
-  simrecord.attribute_coef_var = mean(mean(cumm_attr_coef_vars))
+  simrecord.attribute_mean = Statistics.mean(mean(cumm_attr_means))
+  simrecord.attribute_median = Statistics.mean(mean(cumm_attr_medians))
+  simrecord.attribute_coef_var = Statistics.mean(mean(cumm_attr_coef_vars))
   (simrecord.neg_count, simrecord.neg_neutral, simrecord.pos_neutral, simrecord.pos_count ) = summarize_bins( fit_diff_counter )
   return simrecord
 end
@@ -196,7 +196,7 @@ end
 
 function means( subpops::PopList, variant_table::Dict{Int64,variant_type} )
   fit(v) = variant_table[v].fitness
-  means = [ mean(map(fit,s)) for s in subpops ]
+  means = [ Statistics.mean(map(fit,s)) for s in subpops ]
   vars = [ var(map(fit,s)) for s in subpops ]
   return means, vars
 end
@@ -205,8 +205,8 @@ function attr_means( subpops::PopList, variant_table::Dict{Int64,variant_type}, 
   ave_means = zeros(Float64,length(subpops))
   i = 1
   for s in subpops
-    att_means = [ mean([variant_table[v].attributes[j] for v in s]) for j =1:num_attributes]
-    ave_means[i] = mean(att_means)
+    att_means = [ Statistics.mean([variant_table[v].attributes[j] for v in s]) for j =1:num_attributes]
+    ave_means[i] = Statistics.mean(att_means)
     i += 1
   end
   #println("ave_means: ",ave_means)
@@ -218,14 +218,14 @@ function attr_vars( subpops::PopList, variant_table::Dict{Int64,variant_type}, n
   i = 1
   for s in subpops
     att_vars = [ var([variant_table[v].attributes[j] for v in s]) for j =1:num_attributes]
-    ave_vars[i] = mean(att_vars)
+    ave_vars[i] = Statistics.mean(att_vars)
     i += 1
   end
   return ave_vars
 end
 
 function coef_var( lst )
-  return std(lst)/mean(lst)
+  return std(lst)/Statistics.mean(lst)
 end
 
 function clean_up_variant_table( previous_variant_id::Int64, previous_previous_variant_id::Int64,

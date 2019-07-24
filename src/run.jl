@@ -7,9 +7,11 @@ using DataStructures
 try   # These are needed julia v7, but will fail in julia v6.  The try ... catch will recover from the failure
   using Distributed
   using Random
+  using Statistics
   using Dates
 catch
 end
+push!(LOAD_PATH,"../src/")
 @everywhere include("ContVarEvolution.jl")
 #include("ContVarEvolution.jl")
 
@@ -74,7 +76,7 @@ else
   if length(ARGS) >= 2   # second command-line argument is random number seed
     seed = parse(Int,ARGS[2])
     println("seed: ",seed)
-    srand(seed)
+    Random.seed!(seed)
   end
 end
 include("$(simname).jl")

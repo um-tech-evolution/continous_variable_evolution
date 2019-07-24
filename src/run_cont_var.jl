@@ -49,12 +49,13 @@ function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_
   # Run the simulation function "cont_var_simulation" on each parameter record in parallel
   # For each trial, "cont_var_simulation" adds the trial results to the parameter/result record
   # You may want to change "pmap" to "map" for debugging purposes if you are getting complicated error messages.
-  sim_record_list_result = pmap(cont_var_simulation, sim_record_list_run )
+  #sim_record_list_result = pmap(cont_var_simulation, sim_record_list_run )
+  sim_record_list_result = map(cont_var_simulation, sim_record_list_run )
   trial = 1
-  writeheader( STDOUT, sim_record )   # change STDOUT to stdout for julia v7 (but then will fail in julia v6)
+  writeheader( Base.stdout, sim_record )   # change STDOUT to stdout for julia v7 (but then will fail in julia v6)
   writeheader( stream, sim_record )  
   for sim_record_result in sim_record_list_result    # write 1 record per trial
-    writerow(STDOUT,trial,sim_record_result)  # change STDOUT to stdout for julia v7
+    writerow(Base.stdout,trial,sim_record_result)  # change STDOUT to stdout for julia v7
     writerow(stream,trial,sim_record_result)
     trial += 1
   end

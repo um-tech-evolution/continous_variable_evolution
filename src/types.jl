@@ -3,6 +3,7 @@
 export variant_type, fitness_location_type
 const Population = Array{Int64,1}
 const PopList = Array{Population,1}
+using Statistics
 try
   using Distributed
   using Random
