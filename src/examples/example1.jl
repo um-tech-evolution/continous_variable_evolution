@@ -13,10 +13,13 @@ const num_trials=1
 #const mutation_stddev = 0.05
 const mutation_stddev_list = [0.04]
 #const num_attributes = 2        # number attributes for quantitative representation
-const num_attributes_list = [2]        # number attributes for quantitative representation
-const ngens = 3       # Generations after burn-in
+#const num_attributes_list = [2]        # number attributes for quantitative representation
+const num_attributes_list = [1]        # number attributes for quantitative representation
+#const ngens = 3       # Generations after burn-in
+const ngens = 2       # Generations after burn-in
 const num_subpops = 1
-const burn_in= 3    # if integer, generations of burn in.  If float, int_burn_in=burn_in*N+50
+#const burn_in= 3    # if integer, generations of burn in.  If float, int_burn_in=burn_in*N+50
+const burn_in= 0    # if integer, generations of burn in.  If float, int_burn_in=burn_in*N+50
 const ideal = 1.0
 const fit_slope = 1.0
 const neutral = false

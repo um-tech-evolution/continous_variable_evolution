@@ -61,14 +61,30 @@ function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
       else
         subpops[j] = propsel( subpops[j], n, variant_table )
       end
+      print("j:",j,"  subpops[j]: ",subpops[j],"  ")
     end
+    println()
     previous_subpops = deepcopy(subpops)
     if after_burn_in
       cumm_fitness_means += [ Statistics.mean( [variant_table[v].fitness for v in s]) for s in subpops]
       cumm_fitness_medians += [ median( [variant_table[v].fitness for v in s]) for s in subpops]
       cumm_fitness_coef_vars += [ coef_var( [variant_table[v].fitness for v in s]) for s in subpops]
       # cumm_attr_means[s][i] is the mean of attribute i for subpop s, where the mean is over elements of s
+      println("B cumm_attr_means: ",cumm_attr_means)
       cumm_attr_means += [ [ Statistics.mean( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops]
+      j = 1
+      for s in subpops
+        print("j:",j,"  ")
+        for i =1:simrecord.num_attributes
+          print("attr:",i,"  ")
+          for v in s 
+            print("val:",variant_table[v].attributes[i],"  ")
+          end
+          print("mean: ",Statistics.mean( [ variant_table[v].attributes[i] for v in s]))
+        end
+        println()
+      end
+      println("A cumm_attr_means: ",cumm_attr_means)
       # cumm_attr_means[s][i] is the median of attribute i for subpop s, where the median is over elements of s
       cumm_attr_medians += [ [ median( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops]
       # cumm_attr_coef_vars[s][i] is the coefficient of variation of attribute i for subpop s, where the mean is over elements of s
