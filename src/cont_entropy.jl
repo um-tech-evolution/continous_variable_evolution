@@ -73,12 +73,12 @@ function values_list( bounds_lst::Array{Tuple{Float64,Symbol,Float64},1} )
     suminc = (bounds_lst[i+1][1]-bounds_lst[i][1])*d[i][2]
     sum += suminc    
     sum_entropy -= suminc > 0.0 ? suminc * log2(suminc) : 0.0
-    print("i: ",i,"  bl[i+1]: ",bounds_lst[i+1],"  d[i]: ",d[i],"  suminc: ",suminc)
-    println("  suminc*log2(suminc): ",suminc*log2(suminc))
+    #print("i: ",i,"  bl[i+1]: ",bounds_lst[i+1],"  d[i]: ",d[i],"  suminc: ",suminc)
+    #println("  suminc*log2(suminc): ",suminc*log2(suminc))
   end
-  println("sum: ",sum,"  sum_entropy: ",sum_entropy)
-  d
-  #sum_entropy
+  #println("sum: ",sum,"  sum_entropy: ",sum_entropy)
+  #d
+  sum_entropy
 end
 
 function cont_entropy( C::Vector{Float64}, w::Float64, a::Float64=0.0, b::Float64=1.0 )
