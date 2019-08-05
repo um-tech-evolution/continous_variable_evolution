@@ -63,14 +63,14 @@ end
 
 function cont_var_result( N_list::Vector{Int64}, num_attributes_list::Vector{Int64}, mutation_stddev_list::Vector{Float64}, N_mut_list::Vector{Float64},
         num_trials, N::Int64, num_subpops::Int64, num_attributes::Int64, ngens::Int64, burn_in::Number, 
-        mutation_stddev::Float64, ideal::Float64, fit_slope::Float64, neutral::Bool=false )
+        mutation_stddev::Float64, ideal::Float64, fit_slope::Float64, neutral::Bool=false, w::Float64=0.1, a::Float64=0.0, b::Float64=2.0 )
   if typeof(burn_in) == Int64
     int_burn_in = burn_in
   else
     int_burn_in = Int(round(burn_in*N+50.0))
   end
   return cont_var_result_type( N_list, num_attributes_list, mutation_stddev_list, N_mut_list, num_trials, N, num_subpops, num_attributes, ngens, int_burn_in, 
-      mutation_stddev, ideal, fit_slope, neutral, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
+      mutation_stddev, ideal, fit_slope, neutral, w,a,b, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
 end
 
 @doc """ function writeheader()
@@ -88,9 +88,13 @@ function writeheader( stream::IO, sim_record::cont_var_result_type )
     "# num_trials=$(sim_record.num_trials)",
     #"# num_attributes=$(sim_record.num_attributes)",
     "# ngens=$(sim_record.ngens)",
+    "# int_burn_in=$(sim_record.int_burn_in)",
     "# neutral=$(sim_record.neutral)",
     "# ideal=$(sim_record.ideal)",
-    "# fit_slope=$(sim_record.fit_slope)"]
+    "# fit_slope=$(sim_record.fit_slope)",
+    "# w=$(sim_record.w)",
+    "# a=$(sim_record.a)",
+    "# b=$(sim_record.b)"]
 
   write(stream,join(param_strings,"\n"),"\n")
   heads = [
@@ -101,7 +105,8 @@ function writeheader( stream::IO, sim_record::cont_var_result_type )
     "int_burn_in",
     "attribute_mean",
     "attribute_median",
-    "attribute_coef_var"
+    "attribute_coef_var",
+    "attribute_entropy"
   ]
   fitness_heads = [   # not written if the simulation is neutral
     "fitness_mean",
@@ -131,7 +136,8 @@ function writerow( stream::IO, trial::Int64, sim_record::cont_var_result_type )
           sim_record.int_burn_in,
           sim_record.attribute_mean,
           sim_record.attribute_median,
-          sim_record.attribute_coef_var
+          sim_record.attribute_coef_var,
+          sim_record.attribute_entropy
   ]
   fitness_values = [
           sim_record.fitness_mean,

@@ -6,6 +6,7 @@
 #        where v = max(a,c_i-w/2) and u = min(b,c_i+w/2).
 # This function is a probability distribution.
 # For the populaition,  f_C(x) = 1/n \sum_{i=1}^n f_{c_i}(x)
+export cont_entropy
 
 
 w = 0.1   # for testing
@@ -82,7 +83,9 @@ function values_list( bounds_lst::Array{Tuple{Float64,Symbol,Float64},1} )
 end
 
 function cont_entropy( C::Vector{Float64}, w::Float64, a::Float64=0.0, b::Float64=1.0 )
-  values_list(bounds_list(steps_bounds(C,w,a,b),a,b))
+  c_ent = values_list(bounds_list(steps_bounds(C,w,a,b),a,b))
+  #println("cont_entropy: C: ",C,"  w: ",w,"  (a,b):",(a,b),"  c_ent: ",c_ent)
+  return c_ent
 end
 
 function step_bounds_check( sb )

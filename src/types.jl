@@ -32,12 +32,16 @@ mutable struct cont_var_result_type
   ideal::Float64             #ideal value 
   fit_slope::Float64         # fitness = 1.0/(fit_slope*distance(attributes,ideal)+1.0)
   neutral::Bool              # If true, fitness = 1
+  w::Float64                  # w (width of interval) parameter for cont_entropy.jl
+  a::Float64                  # a (global lower bound) parameter for cont_entropy.jl
+  b::Float64                  # b (global lower bound) parameter for cont_entropy.jl
   fitness_mean::Float64      # average of fitnesses over subpopulations and generations
   fitness_median::Float64      # average of fitnesses over subpopulations and generations
   fitness_coef_var::Float64  # average coefficent of variation of fitnesss over subpopulations and generations
   attribute_mean::Float64    # average of attributes over attributes, subpopulations, and generations
   attribute_median::Float64    # average of attributes over attributes, subpopulations, and generations
   attribute_coef_var::Float64 # average coefficent of variation of attributes over attributes, subpopulations and generations
+  attribute_entropy::Float64  # average entropy of attributes over attributes, subpopulations and generations
   neg_count::Int64        # Number of fitness differences < -1.0/N
   neg_neutral::Int64      # Number of fitness differences >= -1.0/N  and < 0.0
   pos_neutral::Int64     # Number of fitness differences >= 0.0 and < 1.0/N
