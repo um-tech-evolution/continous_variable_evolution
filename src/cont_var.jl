@@ -11,6 +11,9 @@ import DataStructures.Accumulator
 Recommended command line to run:
 >  julia run.jl configs/example1
 =#
+# 8/3/19:  Added continuous_entropy to saved statistics
+
+# temporarily set w, a, b parameters
 
 @doc """ function cont_var_simulation()
   Wright-Fisher model simulation (as opposed to Moran model)
@@ -22,15 +25,22 @@ Recommended command line to run:
     variant_table Keeps track fitnesses and variant parent and innovation ancestor
 """
 function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
+  w = simrecord.w
+  a = simrecord.a
+  b = simrecord.b
   fit_diff_counter = counter(Int64)
   variant_table = Dict{Int64,variant_type}()
   #int_burn_in = Int(round(simrecord.burn_in*simrecord.N+50.0))  # reduce for testing
   id = Int[1]
   n = Int(floor(simrecord.N/simrecord.num_subpops))    # size of subpopulations
   #println("N: ",simrecord.N,"  mutation_stddev: ",simrecord.mutation_stddev,"  num_attributes: ",simrecord.num_attributes,"  int_burn_in: ",simrecord.int_burn_in)
+  #println("w: ",w,"  a: ",a,"  b: ",b)
   cumm_fitness_means = zeros(Float64,simrecord.num_subpops)
   cumm_fitness_medians = zeros(Float64,simrecord.num_subpops)
   cumm_fitness_coef_vars = zeros(Float64,simrecord.num_subpops)
+  cumm_attr_entropy_means = [ zeros(Float64,simrecord.num_attributes) for i in 1:simrecord.num_subpops]
+  cumm_entropy_medians = [ zeros(Float64,simrecord.num_attributes) for i in 1:simrecord.num_subpops]
+  cumm_entropy_coef_vars = [ zeros(Float64,simrecord.num_attributes) for i in 1:simrecord.num_subpops]
   cumm_attr_means = [ zeros(Float64,simrecord.num_attributes) for i in 1:simrecord.num_subpops]
   cumm_attr_medians = [ zeros(Float64,simrecord.num_attributes) for i in 1:simrecord.num_subpops]
   cumm_attr_coef_vars = [ zeros(Float64,simrecord.num_attributes) for i in 1:simrecord.num_subpops]
@@ -61,34 +71,27 @@ function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
       else
         subpops[j] = propsel( subpops[j], n, variant_table )
       end
-      print("j:",j,"  subpops[j]: ",subpops[j],"  ")
+      #println("j:",j,"  subpops[j]: ",subpops[j],"  attr: ",[[variant_table[v].attributes[i] for v in subpops[j]] for i =1:simrecord.num_attributes] )
     end
-    println()
+    #println()
     previous_subpops = deepcopy(subpops)
     if after_burn_in
       cumm_fitness_means += [ Statistics.mean( [variant_table[v].fitness for v in s]) for s in subpops]
       cumm_fitness_medians += [ median( [variant_table[v].fitness for v in s]) for s in subpops]
       cumm_fitness_coef_vars += [ coef_var( [variant_table[v].fitness for v in s]) for s in subpops]
       # cumm_attr_means[s][i] is the mean of attribute i for subpop s, where the mean is over elements of s
-      println("B cumm_attr_means: ",cumm_attr_means)
+      #println("A attr_means: ",[ [ Statistics.mean( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops])
       cumm_attr_means += [ [ Statistics.mean( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops]
-      j = 1
-      for s in subpops
-        print("j:",j,"  ")
-        for i =1:simrecord.num_attributes
-          print("attr:",i,"  ")
-          for v in s 
-            print("val:",variant_table[v].attributes[i],"  ")
-          end
-          print("mean: ",Statistics.mean( [ variant_table[v].attributes[i] for v in s]))
-        end
-        println()
-      end
-      println("A cumm_attr_means: ",cumm_attr_means)
+      #println("A attributes: ",[[[variant_table[v].attributes[i] for v in s] for i =1:simrecord.num_attributes ] for s in subpops])
+      #println("A cumm_attr_means: ",cumm_attr_means)
       # cumm_attr_means[s][i] is the median of attribute i for subpop s, where the median is over elements of s
       cumm_attr_medians += [ [ median( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops]
       # cumm_attr_coef_vars[s][i] is the coefficient of variation of attribute i for subpop s, where the mean is over elements of s
       cumm_attr_coef_vars += [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops]
+      #println("A entropy: ",[ [Statistics.mean( [ cont_entropy([variant_table[v].attributes[i] for v in s],w,a,b)]) for i =1:simrecord.num_attributes ] for s in subpops])
+      cumm_attr_entropy_means += [ [Statistics.mean( [ cont_entropy([variant_table[v].attributes[i] for v in s],w,a,b)]) for i =1:simrecord.num_attributes ] for s in subpops]
+      #println("A attributes: ",[[[variant_table[v].attributes[i] for v in s] for i =1:simrecord.num_attributes ] for s in subpops])
+      #println("A cumm_attr_entropy_means: ",cumm_attr_entropy_means)
       #println("fitness_mean: ", [ Statistics.mean( [variant_table[v].fitness for v in s]) for s in subpops])
       #println("attr_coef_var: ",  [ [ coef_var( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops])
       #println("attr mean: ", [ [ Statistics.mean( [ variant_table[v].attributes[i] for v in s]) for i =1:simrecord.num_attributes ] for s in subpops])
@@ -101,16 +104,22 @@ function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
   cumm_fitness_medians /= simrecord.ngens
   cumm_fitness_coef_vars /= simrecord.ngens
   cumm_attr_means /= simrecord.ngens
+  #println("S cumm_attr_means: ", cumm_attr_means)
   cumm_attr_medians /= simrecord.ngens
   cumm_attr_coef_vars /= simrecord.ngens
+  cumm_attr_entropy_means /= simrecord.ngens
+  #println("S cumm_attr_entropy_means: ", cumm_attr_entropy_means)
   # The next 3 means are over subpops
   simrecord.fitness_mean = Statistics.mean(cumm_fitness_means)
   simrecord.fitness_median = Statistics.mean(cumm_fitness_medians)
   simrecord.fitness_coef_var = Statistics.mean(cumm_fitness_coef_vars)
   # The next 3 means are over attributes and subpops
   simrecord.attribute_mean = Statistics.mean(mean(cumm_attr_means))
+  #println("simrecord.attribute_mean: ",simrecord.attribute_mean)
   simrecord.attribute_median = Statistics.mean(mean(cumm_attr_medians))
   simrecord.attribute_coef_var = Statistics.mean(mean(cumm_attr_coef_vars))
+  simrecord.attribute_entropy = Statistics.mean(mean(cumm_attr_entropy_means))
+  #println("simrecord.attribute_entropy: ",simrecord.attribute_entropy)
   (simrecord.neg_count, simrecord.neg_neutral, simrecord.pos_neutral, simrecord.pos_count ) = summarize_bins( fit_diff_counter )
   return simrecord
 end
