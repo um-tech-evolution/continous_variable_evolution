@@ -13,9 +13,4 @@ const burn_in= 2.0    # generations of burn_in as a multiple of N
 const ideal = 1.0
 const fit_slope = 1.0
 const neutral = false
-
-
-
 const w = 0.1
-const a = 0.0
-const b = 2.0
