@@ -43,11 +43,11 @@ function save_params()
   if my_isdefined(:mutation_stddev_list)
     sim_record = ContVarEvolution.cont_var_result( N_list, num_attributes_list, mutation_stddev_list, Float64[], num_trials,N_list[1],
        num_subpops,num_attributes_list[1], ngens, burn_in, 
-       mutation_stddev_list[1], ideal, fit_slope, neutral )
+       mutation_stddev_list[1], ideal, fit_slope, neutral, w )
   elseif my_isdefined( :N_mut_list )
     sim_record = ContVarEvolution.cont_var_result( N_list, num_attributes_list, Float64[], N_mut_list, num_trials,N_list[1],
        num_subpops,num_attributes_list[1], ngens, burn_in, 
-       N_mut_list[1]/N_list[1], ideal, fit_slope, neutral ) 
+       N_mut_list[1]/N_list[1], ideal, fit_slope, neutral, w ) 
   else
     error("Either mutation_stddev_list or N_mut_list must be defined in the configuration file.")
   end
@@ -61,7 +61,7 @@ end
 """
 function check_parameters()
   global num_trials, N_list, num_subpops, num_attributes_list, ngens, burn_in, mutation_stddev_list, N_mut_list, ideal, fit_slope, neutral
-  param_list = [:num_trials, :N_list, :num_subpops, :num_attributes_list, :ngens, :burn_in, :ideal, :fit_slope, :neutral]
+  param_list = [:num_trials, :N_list, :num_subpops, :num_attributes_list, :ngens, :burn_in, :ideal, :fit_slope, :neutral, :w]
   for p in param_list
     if !my_isdefined(p)
       error("The parameter $(String(p)) is not defined in the parameter file: $(simname).jl.")
@@ -82,6 +82,8 @@ end
 include("$(simname).jl")
 #println("simname: ",simname)
 println("simtype: ",simtype)
+println("w: ",w)
 check_parameters()
 sim_record = save_params()
+println("simrecord.w: ",sim_record.w)
 run_trials( simname, sim_record )

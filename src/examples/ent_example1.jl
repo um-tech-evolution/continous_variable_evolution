@@ -23,4 +23,4 @@ const burn_in= 1    # if integer, generations of burn in.  If float, int_burn_in
 const ideal = 1.0
 const fit_slope = 1.0
 const neutral = false
-const w = 0.1
+const w = 0.25

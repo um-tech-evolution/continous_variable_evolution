@@ -26,8 +26,6 @@ print_increment = 20
 """
 function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
   w = simrecord.w
-  a = simrecord.a
-  b = simrecord.b
   fit_diff_counter = counter(Int64)
   variant_table = Dict{Int64,variant_type}()
   #int_burn_in = Int(round(simrecord.burn_in*simrecord.N+50.0))  # reduce for testing

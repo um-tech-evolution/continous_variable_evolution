@@ -49,8 +49,8 @@ function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_
   # Run the simulation function "cont_var_simulation" on each parameter record in parallel
   # For each trial, "cont_var_simulation" adds the trial results to the parameter/result record
   # You may want to change "pmap" to "map" for debugging purposes if you are getting complicated error messages.
-  sim_record_list_result = pmap(cont_var_simulation, sim_record_list_run )
-  #sim_record_list_result = map(cont_var_simulation, sim_record_list_run )
+  #sim_record_list_result = pmap(cont_var_simulation, sim_record_list_run )
+  sim_record_list_result = map(cont_var_simulation, sim_record_list_run )
   # The next line is for multigeneration output
   #println("    N, mutstd,   g, mean,median,coefvar,entropy")
   trial = 1
@@ -65,14 +65,14 @@ end
 
 function cont_var_result( N_list::Vector{Int64}, num_attributes_list::Vector{Int64}, mutation_stddev_list::Vector{Float64}, N_mut_list::Vector{Float64},
         num_trials, N::Int64, num_subpops::Int64, num_attributes::Int64, ngens::Int64, burn_in::Number, 
-        mutation_stddev::Float64, ideal::Float64, fit_slope::Float64, neutral::Bool=false, w::Float64=0.1, a::Float64=0.0, b::Float64=2.0 )
+        mutation_stddev::Float64, ideal::Float64, fit_slope::Float64, neutral::Bool, w::Float64  )
   if typeof(burn_in) == Int64
     int_burn_in = burn_in
   else
     int_burn_in = Int(round(burn_in*N+50.0))
   end
   return cont_var_result_type( N_list, num_attributes_list, mutation_stddev_list, N_mut_list, num_trials, N, num_subpops, num_attributes, ngens, int_burn_in, 
-      mutation_stddev, ideal, fit_slope, neutral, w,a,b, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
+      mutation_stddev, ideal, fit_slope, neutral, w, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
 end
 
 @doc """ function writeheader()
@@ -94,9 +94,7 @@ function writeheader( stream::IO, sim_record::cont_var_result_type )
     "# neutral=$(sim_record.neutral)",
     "# ideal=$(sim_record.ideal)",
     "# fit_slope=$(sim_record.fit_slope)",
-    "# w=$(sim_record.w)",
-    "# a=$(sim_record.a)",
-    "# b=$(sim_record.b)"]
+    "# w=$(sim_record.w)"]
 
   write(stream,join(param_strings,"\n"),"\n")
   heads = [

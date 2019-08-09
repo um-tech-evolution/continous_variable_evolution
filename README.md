@@ -10,6 +10,12 @@ To run examples, do the following on the command line when in the src/ subdirect
 
 where ? is one of 1, 2, 3, 4, or 5.  
 
+To run entropy examples, do the following on the command line when in the src/ subdirectory:
+
+> julia run.jl examples/ent_example?
+
+where ? is one of 1, 2, 3, 4, or 5.  
+
 To specify a random number seed, add it as an extra command-line parameter:
 
 > julia run.jl examples/example? 8   # set random number seed to 8
