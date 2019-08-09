@@ -27,7 +27,8 @@ mutable struct cont_var_result_type
   num_subpops::Int64   # number of subpopulations
   num_attributes::Int64  # number of attributes of a variant
   ngens::Int64  # number of generations after burn-in
-  int_burn_in::Int64
+  burn_in::Number    # parameter "burn_in" which may be Float or Int
+  int_burn_in::Int64    # if burn_in is Float, int_burn_in = Int(round(burn_in*N+50.0))
   mutation_stddev::Float64  # standard deviation of mutation distribution of mutation perturbations
   ideal::Float64             #ideal value 
   fit_slope::Float64         # fitness = 1.0/(fit_slope*distance(attributes,ideal)+1.0)

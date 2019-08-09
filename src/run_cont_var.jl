@@ -14,6 +14,10 @@ function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_
   #if my_isdefined(:mutation_stddev_list)
   if length(sim_record.mutation_stddev_list) > 0
     for N in sim_record.N_list
+      if !(typeof(sim_record.burn_in) <: Int)
+        sim_record.int_burn_in = Int(round(sim_record.burn_in*N+50.0))
+        # println("sim_record.int_burn_in: ",sim_record.int_burn_in)
+      end
       for num_attributes in sim_record.num_attributes_list
         for mutation_stddev in sim_record.mutation_stddev_list
           for trial = 1:sim_record.num_trials
@@ -29,6 +33,10 @@ function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_
   #elseif my_isdefined(:N_mut_list)
   elseif length(sim_record.N_mut_list) > 0 
     for N in sim_record.N_list
+      if !(typeof(sim_record.burn_in) <: Int)
+        sim_record.int_burn_in = Int(round(sim_record.burn_in*N+50.0))
+        # println("sim_record.int_burn_in: ",sim_record.int_burn_in)
+      end
       for num_attributes in sim_record.num_attributes_list
         for N_mut in sim_record.N_mut_list
           for trial = 1:sim_record.num_trials
@@ -63,15 +71,19 @@ function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_
   end
 end    
 
+@doc """ function cont_var_result()
+   Constructs a cont_var_result record with the fields corresponding to parameters given in the argument list set, and the result fields set to 0 or 0.0.
+"""
 function cont_var_result( N_list::Vector{Int64}, num_attributes_list::Vector{Int64}, mutation_stddev_list::Vector{Float64}, N_mut_list::Vector{Float64},
-        num_trials, N::Int64, num_subpops::Int64, num_attributes::Int64, ngens::Int64, burn_in::Number, 
+        num_trials, N::Int64, num_subpops::Int64, num_attributes::Int64, ngens::Int64, burn_in::Number, int_burn_in::Int64,
         mutation_stddev::Float64, ideal::Float64, fit_slope::Float64, neutral::Bool, w::Float64  )
   if typeof(burn_in) == Int64
     int_burn_in = burn_in
   else
-    int_burn_in = Int(round(burn_in*N+50.0))
+    #int_burn_in = Int(round(burn_in*N+50.0))
+    int_burn_in = -1   # to be set later in run_trials
   end
-  return cont_var_result_type( N_list, num_attributes_list, mutation_stddev_list, N_mut_list, num_trials, N, num_subpops, num_attributes, ngens, int_burn_in, 
+  return cont_var_result_type( N_list, num_attributes_list, mutation_stddev_list, N_mut_list, num_trials, N, num_subpops, num_attributes, ngens, burn_in, int_burn_in, 
       mutation_stddev, ideal, fit_slope, neutral, w, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0,0,0,0 )
 end
 
@@ -93,8 +105,8 @@ function writeheader( stream::IO, sim_record::cont_var_result_type )
     "# int_burn_in=$(sim_record.int_burn_in)",
     "# neutral=$(sim_record.neutral)",
     "# ideal=$(sim_record.ideal)",
-    "# fit_slope=$(sim_record.fit_slope)",
-    "# w=$(sim_record.w)"]
+    "# fit_slope=$(sim_record.fit_slope)"]
+    #"# w=$(sim_record.w)"]  # Added as a column in the output table  8/9/19
 
   write(stream,join(param_strings,"\n"),"\n")
   heads = [
@@ -103,6 +115,7 @@ function writeheader( stream::IO, sim_record::cont_var_result_type )
     "mutation_stddev",
     "num_attributes",
     "int_burn_in",
+    "w",
     "attribute_mean",
     "attribute_median",
     "attribute_coef_var",
@@ -134,6 +147,7 @@ function writerow( stream::IO, trial::Int64, sim_record::cont_var_result_type )
           sim_record.mutation_stddev,
           sim_record.num_attributes,
           sim_record.int_burn_in,
+          sim_record.w,
           sim_record.attribute_mean,
           sim_record.attribute_median,
           sim_record.attribute_coef_var,
