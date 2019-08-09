@@ -57,8 +57,8 @@ function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_
   # Run the simulation function "cont_var_simulation" on each parameter record in parallel
   # For each trial, "cont_var_simulation" adds the trial results to the parameter/result record
   # You may want to change "pmap" to "map" for debugging purposes if you are getting complicated error messages.
-  #sim_record_list_result = pmap(cont_var_simulation, sim_record_list_run )
-  sim_record_list_result = map(cont_var_simulation, sim_record_list_run )
+  sim_record_list_result = pmap(cont_var_simulation, sim_record_list_run )
+  #sim_record_list_result = map(cont_var_simulation, sim_record_list_run )
   # The next line is for multigeneration output
   #println("    N, mutstd,   g, mean,median,coefvar,entropy")
   trial = 1
