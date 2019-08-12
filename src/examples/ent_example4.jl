@@ -12,3 +12,5 @@ const ideal = 1.0
 const fit_slope = 1.0
 const neutral = true
 const w = 0.1
+multi_generational = true
+print_increment=20

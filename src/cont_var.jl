@@ -13,7 +13,6 @@ Recommended command line to run:
 =#
 # 8/3/19:  Added continuous_entropy to saved statistics
 
-print_increment = 20
 
 @doc """ function cont_var_simulation()
   Wright-Fisher model simulation (as opposed to Moran model)
@@ -25,6 +24,8 @@ print_increment = 20
     variant_table Keeps track fitnesses and variant parent and innovation ancestor
 """
 function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
+  global multi_generational
+  #multi_generational = true
   w = simrecord.w
   fit_diff_counter = counter(Int64)
   variant_table = Dict{Int64,variant_type}()
@@ -99,12 +100,13 @@ function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
       #println("medians: ",attr_medians[1])
       #println("coef_vars: ",attr_coef_vars[1])
       #println("attr_entropy_means: ",attr_entropy_means[1])
-      #= The next 4 lines are for multigeneration output
-      if g % print_increment == 0
-        @printf("%5d,%7.4f,%5d,",simrecord.N,simrecord.mutation_stddev,g)
-        @printf("%7.4f,%7.4f,%7.4f,%7.4f\n",attr_means[1][1],attr_medians[1][1],attr_coef_vars[1][1],attr_entropy_means[1][1])
+      # The next 4 lines are for multigeneration output
+      if ContVarEvolution.multi_generational 
+        if g % print_increment == 0
+          @printf("%5d,%7.4f,%7.4f,%5d,",simrecord.N,simrecord.mutation_stddev,simrecord.w,g)
+          @printf("%7.4f,%7.4f,%7.4f,%7.4f\n",attr_means[1][1],attr_medians[1][1],attr_coef_vars[1][1],attr_entropy_means[1][1])
+        end
       end
-      =#
       #println("A attributes: ",[[[variant_table[v].attributes[i] for v in s] for i =1:simrecord.num_attributes ] for s in subpops])
       #println("A cumm_attr_entropy_means: ",cumm_attr_entropy_means)
       #println("fitness_mean: ", [ Statistics.mean( [variant_table[v].fitness for v in s]) for s in subpops])

@@ -1,5 +1,7 @@
 # See run.jl for command-line example runs.
 export run_trials, cont_var_result, print_cont_var_result, run_trial, writeheader, writerow, my_isdefined, check_parameters
+print_increment = 20
+#multi_generational = true
 
 @doc """ function run_trials(sim_record::ContVarEvolution.cont_var_result_type )
   Runs multiple trials of the simulation using the parameter file "\$(simname).jl" where  simname is the first command line argument.
@@ -25,6 +27,10 @@ function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_
             sim_record_run.N = N   
             sim_record_run.num_attributes = num_attributes   
             sim_record_run.mutation_stddev = mutation_stddev   
+            if sim_record.w < 0.0
+              sim_record_run.w = mutation_stddev
+              #println("sim_record_run.w: ",sim_record_run.w)
+            end
             Base.push!(sim_record_list_run, sim_record_run )
           end
         end
@@ -45,6 +51,10 @@ function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_
             sim_record_run.num_attributes = num_attributes   
             sim_record_run.mutation_stddev = N_mut/N
             #println("N:",sim_record_run.N,"  num_attr:",sim_record_run.num_attributes,"  mutation_stddev: ",sim_record_run.mutation_stddev)
+            if sim_record.w < 0.0
+              sim_record_run.w = sim_record_run.mutation_stddev
+              #println("sim_record_run.w: ",sim_record_run.w)
+            end
             Base.push!(sim_record_list_run, sim_record_run )
           end
         end
@@ -54,13 +64,15 @@ function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_
     error("Either mutation_stddev_list or N_mut_list must be defined in the configuration file.")
   end
   println("===================================")
+  # The next line is for multigeneration output
+  if ContVarEvolution.multi_generational
+    println("    N, mutstd,   w,   g, mean,median,coefvar,entropy")
+  end
   # Run the simulation function "cont_var_simulation" on each parameter record in parallel
   # For each trial, "cont_var_simulation" adds the trial results to the parameter/result record
   # You may want to change "pmap" to "map" for debugging purposes if you are getting complicated error messages.
   sim_record_list_result = pmap(cont_var_simulation, sim_record_list_run )
   #sim_record_list_result = map(cont_var_simulation, sim_record_list_run )
-  # The next line is for multigeneration output
-  #println("    N, mutstd,   g, mean,median,coefvar,entropy")
   trial = 1
   writeheader( Base.stdout, sim_record )   # change STDOUT to stdout for julia v7 (but then will fail in julia v6)
   writeheader( stream, sim_record )  
@@ -105,8 +117,8 @@ function writeheader( stream::IO, sim_record::cont_var_result_type )
     "# int_burn_in=$(sim_record.int_burn_in)",
     "# neutral=$(sim_record.neutral)",
     "# ideal=$(sim_record.ideal)",
-    "# fit_slope=$(sim_record.fit_slope)"]
-    #"# w=$(sim_record.w)"]  # Added as a column in the output table  8/9/19
+    "# fit_slope=$(sim_record.fit_slope)",
+    "# w=$(sim_record.w)"]  # Added as a column in the output table  8/9/19
 
   write(stream,join(param_strings,"\n"),"\n")
   heads = [
