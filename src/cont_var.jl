@@ -1,5 +1,7 @@
 # ContVar structure simulation with horizontal transfer
 export cont_var_simulation, fitness
+using Statistics
+using DataStructures
 try    # "using Printf" fails in julia v6, but avoids a deprecation error in julia v7
   using Printf
 catch

@@ -1,16 +1,9 @@
 # Includes all Julia code except for the file  src/run.jl.
+using Statistics
+using Random
+using Distributed
+using Dates
 module ContVarEvolution
-#=
-try 
-  using Random
-  using Distributed
-catch
-end
-try 
-  using Dates
-catch
-end
-=#
 include("types.jl")     
 include("propsel.jl")   # Proportional selection
 include("cont_var.jl")  # Primary code for simulation

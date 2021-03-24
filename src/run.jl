@@ -4,12 +4,10 @@
 # Example run:  julia run.jl examples/example1  1     # runs with random seed = 1
 # Example run:  julia -p 4 run.jl examples/example1
 using DataStructures
-try   # These are needed julia v7, but will fail in julia v6.  The try ... catch will recover from the failure
-  using Distributed
-  using Random
-  using Dates
-catch
-end
+using Distributed
+using Random
+using Dates
+using Statistics
 @everywhere include("ContVarEvolution.jl")
 #include("ContVarEvolution.jl")
 
