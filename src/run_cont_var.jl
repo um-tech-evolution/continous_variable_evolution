@@ -1,6 +1,6 @@
 # See run.jl for command-line example runs.
 export run_trials, cont_var_result, print_cont_var_result, run_trial, writeheader, writerow, my_isdefined, check_parameters
-print_increment = 20
+#print_increment = 20
 #multi_generational = true
 
 @doc """ function run_trials(sim_record::ContVarEvolution.cont_var_result_type )

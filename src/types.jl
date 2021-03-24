@@ -13,7 +13,8 @@ end
 
 global multi_generational
 global print_increment 
-multi_generational = false
+multi_generational = true
+print_increment = 20
 
 mutable struct variant_type
   fitness::Float64    # The fitness of this variant

@@ -5,6 +5,7 @@
 # This applies if the population has exact duplicates.
 export cont_entropy
 
+# Identical to c_entropy except for default value for w
 function cont_entropy( x::Vector{Float64}, w::Float64=0.25 )
   n = length(x)
   ent_sum = 0.0
@@ -22,3 +23,27 @@ function cont_entropy( x::Vector{Float64}, w::Float64=0.25 )
   ent_sum
 end
 
+# Used in the function c_entropy
+# An adjustment factor for x based on parameter w and the closeness of other points in X
+function m_prime( x::Float64, X::Vector{Float64}, w::Float64 )
+  sum = 0.0
+  for y in X
+    if abs(x-y) < w
+      sum += 1 - abs(x-y)/w
+      #println("m' y: ","  summand: ",1-abs(x-y)/w)
+    end
+  end
+  println("m': ",sum)
+  sum
+end
+
+# Identical to cont_entropy except for default value for w 
+function c_entropy(  X::Vector{Float64}, w::Float64 )
+  N = length(X)
+  sum = 0.0
+  for x in X
+    sum += (1.0/N)*log2(N/m_prime(x,X,w))
+      println("cent x: ",x,"  summand: ",(1.0/N)*log2(N/m_prime(x,X,w)))
+  end
+  sum
+end
