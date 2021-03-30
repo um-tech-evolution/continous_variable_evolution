@@ -5,11 +5,12 @@ export run_trials, cont_var_result, print_cont_var_result, run_trial, writeheade
   Runs multiple trials of the simulation using the parameter file "\$(simname).jl" where  simname is the first command line argument.
   Trials can be run in parallel using the Julia parallel map (pmap) facility.
 """
-function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_var_result_type ) 
+#function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_var_result_type ) 
+function run_trials( simname::AbstractString, sim_record::cont_var_result_type ) 
   stream = open("$(simname).csv","w")
   println("stream: ",stream)
   # collect these parameter records into the list   sim_record_list_run 
-  sim_record_list_run = ContVarEvolution.cont_var_result_type[]
+  sim_record_list_run = cont_var_result_type[]
   trial=1
   #if my_isdefined(:mutation_stddev_list)
   if length(sim_record.mutation_stddev_list) > 0
@@ -50,6 +51,7 @@ function run_trials( simname::AbstractString, sim_record::ContVarEvolution.cont_
   # For each trial, "cont_var_simulation" adds the trial results to the parameter/result record
   # You may want to change "pmap" to "map" for debugging purposes if you are getting complicated error messages.
   sim_record_list_result = pmap(cont_var_simulation, sim_record_list_run )
+  #sim_record_list_result = map(cont_var_simulation, sim_record_list_run )
   trial = 1
   writeheader( stdout, sim_record )   
   writeheader( stream, sim_record )  

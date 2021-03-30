@@ -41,6 +41,7 @@ end
 """
 function increment_bins( bins::Accumulator{Int64,Int64}, x::Float64, cutoff::Float64 )
   index = Int(floor(x/cutoff))
+  #println("inc bins x: ",x,"  index: ",index)
   push!(bins, index)
 end  
 
@@ -77,6 +78,35 @@ function check_bins( vect::Vector{Float64}, cutoff::Float64 )
   end
 end
 
+# Checks that the lower_bounds_vect produce by bins_to_vector() is correct
+function checkbins( vect::Vector{Float64}, cutoff::Float64 )
+  bins = counter(Int64)
+  for v in vect
+    increment_bins( bins, v, cutoff )
+  end
+  println("bins: ",bins)
+  (bin_vect,lower_bounds_vect) = bins_to_vector( bins, cutoff )
+  println("lower_bounds_vect: ",lower_bounds_vect)
+  counts = zeros(Int64,length(bin_vect))
+  for i = 1:length(bin_vect)
+    if i < length(bin_vect)
+      len = length(filter(x->lower_bounds_vect[i]<=x && x<lower_bounds_vect[i+1],vect))
+    else
+      len = length(filter(x->lower_bounds_vect[i]<=x && x<lower_bounds_vect[i]+cutoff,vect))
+    end
+    counts[i] = len
+  end
+  if bin_vect == counts
+    println("passed")
+  else
+    println("failed")
+    println("bin_vect: ",bin_vect)
+    println("counts:   ",counts )
+  end
+  counts
+end  
+      
+
 @doc """ function summarize_bins()
   Returns a 4-tuple of vect values in the following intervals: 
   (-infinity,-cutoff)
@@ -92,4 +122,18 @@ function summarize_bins( bins::Accumulator{Int64,Int64} )
   neg_count = min <= -2 ? sum( bins[k] for k = min:-2 ) : 0
   pos_count = 1 <= max ? sum( bins[k] for k = 1:max ) : 0
   return (neg_count,neg_neutral,pos_neutral,pos_count)
+end
+
+function bins_to_vector( bins::Accumulator{Int64,Int64}, cutoff::Float64 )
+  min = minimum(keys(bins))
+  max = maximum(keys(bins))
+  println("bins cutoff: ",cutoff,"  min: ",min,"  max: ",max)
+  bin_vect = zeros(Int64,(max-min+1))
+  lower_bounds_vect = [cutoff*(min+i) for i = 0:(max-min)]
+  for k=1:(max-min+1)
+    bin_vect[k] = bins[k+min-1]
+    lower_bounds_vec=k+min
+    #println("k: ",k,"  k+min-1: ",k+min-1,"  bins[k+min-1]: ", bins[k+min-1])
+  end
+  (bin_vect,lower_bounds_vect)
 end

@@ -37,11 +37,11 @@ function save_params()
   global N_mut_list
   # sim_record  is a record containing both the parameters and the results for a trial
   if my_isdefined(:mutation_stddev_list)
-    sim_record = ContVarEvolution.cont_var_result( N_list, num_attributes_list, mutation_stddev_list, Float64[], num_trials,N_list[1],
+    sim_record = cont_var_result( N_list, num_attributes_list, mutation_stddev_list, Float64[], num_trials,N_list[1],
        num_subpops,num_attributes_list[1], ngens, burn_in, 
        mutation_stddev_list[1], ideal, fit_slope, neutral )
   elseif my_isdefined( :N_mut_list )
-    sim_record = ContVarEvolution.cont_var_result( N_list, num_attributes_list, Float64[], N_mut_list, num_trials,N_list[1],
+    sim_record = cont_var_result( N_list, num_attributes_list, Float64[], N_mut_list, num_trials,N_list[1],
        num_subpops,num_attributes_list[1], ngens, burn_in, 
        N_mut_list[1]/N_list[1], ideal, fit_slope, neutral ) 
   else
@@ -66,7 +66,7 @@ function check_parameters()
 end
 
 if length(ARGS) == 0
-  simname = "examples/example2"
+  simname = "examples/example0"
 else
   simname = ARGS[1]
   if length(ARGS) >= 2   # second command-line argument is random number seed

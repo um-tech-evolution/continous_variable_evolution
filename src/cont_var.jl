@@ -23,7 +23,7 @@ Recommended command line to run:
     num_attributes   number of quantitative attributes of a variant
     variant_table Keeps track fitnesses and variant parent and innovation ancestor
 """
-function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
+function cont_var_simulation( simrecord::cont_var_result_type; bins_to_vect::Bool=:false, bins_cutoff::Float64=1.0/simrecord.N )
   fit_diff_counter = counter(Int64)
   variant_table = Dict{Int64,variant_type}()
   #int_burn_in = Int(round(simrecord.burn_in*simrecord.N+50.0))  # reduce for testing
@@ -55,9 +55,10 @@ function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
     current_variant_id = id[1]
     for j = 1:simrecord.num_subpops
       for i = 1:n
-        subpops[j][i] = mutate_attributes( previous_subpops[j][i], id, variant_table, simrecord, after_burn_in, fit_diff_counter )
+        subpops[j][i] = mutate_attributes( previous_subpops[j][i], id, variant_table, simrecord, after_burn_in, fit_diff_counter, bins_to_vect=bins_to_vect, bins_cutoff=bins_cutoff )
       end
       if simrecord.neutral
+        # Equivalent to proportional selection with equal fitnesses
         r = rand(1:n,n)
         subpops[j] = subpops[j][ r ]
       else
@@ -97,8 +98,13 @@ function cont_var_simulation( simrecord::ContVarEvolution.cont_var_result_type )
   simrecord.attribute_mean = mean(mean(cumm_attr_means))
   simrecord.attribute_median = mean(mean(cumm_attr_medians))
   simrecord.attribute_coef_var = mean(mean(cumm_attr_coef_vars))
-  (simrecord.neg_count, simrecord.neg_neutral, simrecord.pos_neutral, simrecord.pos_count ) = summarize_bins( fit_diff_counter )
-  return simrecord
+  if !bins_to_vect
+    (simrecord.neg_count, simrecord.neg_neutral, simrecord.pos_neutral, simrecord.pos_count ) = summarize_bins( fit_diff_counter )
+    return simrecord
+  else
+    (bins_vector,lower_bounds_vect) = bins_to_vector( fit_diff_counter, bins_cutoff )
+    return (simrecord,bins_vector,lower_bounds_vect)
+  end
 end
 
 function fitness( attributes::Vector{Float64}, ideal::Vector{Float64}, neutral::Bool )
@@ -143,14 +149,20 @@ end
   Mutate the attributes corresponding the variant_table[v].
   The mutation is actually done by the function mutate().
 """
-function mutate_attributes( v::Int64, id::Vector{Int64}, variant_table::Dict{Int64,ContVarEvolution.variant_type}, 
-    simrecord::ContVarEvolution.cont_var_result_type, after_burn_in::Bool, fit_diff_counter::Accumulator{Int64,Int64} )
+function mutate_attributes( v::Int64, id::Vector{Int64}, variant_table::Dict{Int64,variant_type}, 
+    simrecord::cont_var_result_type, after_burn_in::Bool, fit_diff_counter::Accumulator{Int64,Int64};
+    bins_to_vect::Bool=:false, bins_cutoff::Float64=1.0/simrecord.N )
   i = id[1]
   vt = variant_table[v]
   new_attributes = mutate( vt.attributes, simrecord.mutation_stddev )
   new_fit = fitness( new_attributes, fill( simrecord.ideal, simrecord.num_attributes), simrecord.neutral )
+  #println("new attr: ",new_attributes,"  new_fit: ",new_fit)
   if after_burn_in
-    increment_bins( fit_diff_counter, new_fit-vt.fitness, 1.0/simrecord.N )
+    if !bins_to_vect
+      increment_bins( fit_diff_counter, new_fit-vt.fitness, 1.0/simrecord.N )
+    else
+      increment_bins( fit_diff_counter, new_fit-vt.fitness, bins_cutoff )
+    end
   end
   variant_table[i] = deepcopy(vt)
   variant_table[i].fitness = new_fit
