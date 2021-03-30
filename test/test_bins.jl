@@ -38,7 +38,6 @@ function test_run_simulation()
   (simrec,bins,lbvec)=cont_var_simulation( simrecord, bins_to_vect=:true, bins_cutoff=bins_cutoff )
   println("bins:  ",bins)
   println("lvvec: ",lbvec)
+  (bins,lbvec)
 end
 
-  
-  
